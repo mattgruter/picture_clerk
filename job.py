@@ -7,7 +7,7 @@ This file contains the Job class
 __author__ = "Matthias Grueter (matthias@grueter.name)"
 __version__ = "$Revision: 0.1 $"
 __date__ = "$Date: 2008/11/18 $"
-__copyright__ = "Copyright (c) 2007 Matthias Grueter"
+__copyright__ = "Copyright (c) 2008 Matthias Grueter"
 __license__ = "GPL"
 
 
@@ -18,12 +18,14 @@ class Job():
     Constructor arguments:
         bin (string)    :   binary to execute
         args (list)     :   arguments to be passed to binary
+        path (string)   :   path in which the job should be executed
         descr (string)  :   descriptive text for use in logging and such.
     """
     
-    def __init__(self, bin, args, descr):
+    def __init__(self, bin, args, path, descr):
         self.bin = bin
         self.args = args
+        self.path = path
         self.descr = descr
 
 
@@ -34,5 +36,4 @@ def _test():
 
 if __name__ == "__main__":
     _test()
-
 

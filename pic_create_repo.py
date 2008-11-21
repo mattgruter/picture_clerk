@@ -7,7 +7,7 @@ This file contains the function that handles repository creation
 __author__ = "Matthias Grueter (matthias@grueter.name)"
 __version__ = "$Revision: 0.1 $"
 __date__ = "$Date: 2008/06/15 $"
-__copyright__ = "Copyright (c) 2007 Matthias Grueter"
+__copyright__ = "Copyright (c) 2008 Matthias Grueter"
 __license__ = "GPL"
 
 import subprocess

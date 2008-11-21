@@ -1,0 +1,26 @@
+Pipeline States
+--------------- 
+
+           stages  buffers         comment
+pipeline
+empty       all empty   all empty   pipeline is created with unstaffed stages (from 'idle')
+idle        all paused  all empty   stages are staffed, but workers have nothing to do (from 'finishing' or 'empty' or 'active' with stop)
+finishing   active  all empty       workers are about to run out of jobs (from active)
+clogged     empty   non-empty       jobs are waiting to be processed but at least 1 stage with jobs waiting is unstaffed
+paused      all paused  non-empty   activity is paused (from active)
+active      active  non-empty       normal running state
+           
+
+Simplified Pipeline States
+--------------------------
+
+inactive    all empty   don't care
+active      >=1 active  don't care
+
+Everything else are intermediate states:
+- idle workers are waiting for jobs but exit after a timeout
+- stage is either empty/inactive (no workers) or staffed/active (workers created)
+- pipeline is active if at least one stage is staffed and inactive if all stages are empty (the state of the buffers doesn't matter. buffers can be flushed independently of workers.)
+
+Drawbacks:
+- queue blocking timeout (for empty queues) of workers should be set quite high if they are created before jobs are present. but this problem also exists in the above more complex case.
