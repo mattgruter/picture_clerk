@@ -11,22 +11,31 @@ __copyright__ = "Copyright (c) 2008 Matthias Grueter"
 __license__ = "GPL"
 
 
+import config
+from picture import Picture
+
+
 # TODO: unit tests
 class Job():
     """Class to organize job orders for workers
 
     Constructor arguments:
-        bin (string)    :   binary to execute
-        args (list)     :   arguments to be passed to binary
-        path (string)   :   path in which the job should be executed
-        descr (string)  :   descriptive text for use in logging and such.
+        picture (Picture)   :   Picture which will be processed by this job
+        seq_num (int)       :   sequence number for batch job tracking
+        descr (string)      :   descriptive text for use in logging and such
     """
     
-    def __init__(self, bin, args, path, descr):
-        self.bin = bin
-        self.args = args
-        self.path = path
+    def __init__(self, picture, seq_num, descr):
+        self.picture = picture
+        self.seq_num = seq_num
         self.descr = descr
+
+
+class DCRawThumbJob(Job):
+    def __init__(self, picture, seq_num):
+        Job.__init__(self, picture, seq_num, 'Extracting thumbnails')
+        self.bin = config.DCRAW_BIN
+        self.args = ['-e', self.picture.filename]
 
 
 # Unit test       

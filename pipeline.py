@@ -12,7 +12,9 @@ __license__ = "GPL"
 
 import Queue
 
+import config
 from worker import Worker, WorkerType
+from stage import Stage
 
 
 #class PipelineState():
@@ -31,13 +33,16 @@ from worker import Worker, WorkerType
 #       something is in its input queue, number of workers is adapted according
 #       to workload and worker performance.)
 class Pipeline():
-    """Pipeline is the container for jobs that have to be executed in sequence.
+    """
+    Pipeline defines the stages of the workflow.
     """
     
-    def __init__(self, name='UnamedPipeline', blueprint)
+    def __init__(self, name, recipe)
         self.name = name
-        self.blueprint = blueprint
-        self.num_stages = self.blueprint.num_stages
+        # recipe defining the sequence of jobs to be performed
+        self.recipe = recipe
+        self.num_stages = self.recipe.num_stages
+        self.num_stageworkers = config.DEFAULT_NUM_STAGEWORKERS
         # Create buffers before and after each stage (hand-off points)
         self.buffers = [Queue.Queue() for i in range(self.num_stages+1)]
         # The input buffer of the pipeline.
@@ -45,24 +50,28 @@ class Pipeline():
         # The output buffer of the pipeline
         self.output = self.buffers[-1]
         # Create stages and connect them to the buffers
-        self.stages = [self.blueprint.stageFactory[i](pipeline=self,
-                        in_buffer=self.buffers[i], out_buffer=self.buffers[i+1],
-                        seq_number=i) for i in range(num_stages)]
-        # Set state to active
+        self.stages = [Stage(name=self.recipe.stage_names[i],
+                             WorkerClass=self.recipe.stage_type[i],
+                             num_workers=self.num_stageworkers,
+                             pipeline=self,
+                             in_buffer=self.buffers[i],
+                             out_buffer=self.buffers[i+1],
+                             seq_number=i) for i in range(num_stages)]
+        # Set state to inactive
         self.isactive = False
 
         
-    def put(self, job)
+    def put(self, picture)
         """Put a Job object into the pipeline"""
-        self.queue.put(job)
+        self.input.put((picture, jobnr))
         
     def get_progress(self)
         """Returns a list of the number of jobs in each queue"""
-        return [queue.qsize() for queue in self.handoff_queues]
+        return [b.qsize() for b in self.buffers]
     
     def start(self)
         """Start all workers"""
-        [stage.start() for queue in self.stages]
+        [s.start() for s in self.stages]
         self.isactive = True
 
     def flush(self)
@@ -72,7 +81,7 @@ class Pipeline():
         
     def stop(self)
         """Stops all workers"""
-        [stage.stop() for stage in self.stages]
+        [s.stop() for s in self.stages]
         self.isactive = False
         
     def abort(self)

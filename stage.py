@@ -25,7 +25,8 @@ class Stage():
     A stage is a segment in a pipeline defining the type of workers it employs.
     """
 
-    def __init__(self, name, WorkerClass, num_worker, pipeline, in_buffer, out_buffer, seq_number):
+    def __init__(self, name, WorkerClass, num_worker, pipeline, in_buffer,
+                 out_buffer, seq_number):
         self.name = name
         self.WorkerClass = WorkerClass
         self.num_worker = num_worker
@@ -37,11 +38,11 @@ class Stage():
         self.isactive = False
 
     def _create_worker(self, num):
-        return [ self.WorkerClass('worker'+str(i), self, self.input, self.output, './') for i in range(num) ]
+        return [ self.WorkerClass(self, self.input, self.output, './') for i in range(num) ]
 
     def add_worker(self):
         new_worker = self._create_stage_worker(1)
-        self.workers.add(new_worker)
+        self.workers.append(new_worker)
         self.num_worker += 1
 
     def remove_worker(self):
