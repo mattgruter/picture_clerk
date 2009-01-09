@@ -11,9 +11,11 @@ __copyright__ = "Copyright (c) 2008 Matthias Grueter"
 __license__ = "GPL"
 
 
+raise(DeprecationWarning('The use of the Job class is deprecated.'))
+
+
 import config
 from picture import Picture
-
 
 # TODO: unit tests
 class Job():

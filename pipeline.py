@@ -13,7 +13,6 @@ __license__ = "GPL"
 import Queue
 
 import config
-from worker import Worker, WorkerType
 from stage import Stage
 
 
@@ -37,7 +36,7 @@ class Pipeline():
     Pipeline defines the stages of the workflow.
     """
     
-    def __init__(self, name, recipe)
+    def __init__(self, name, recipe):
         self.name = name
         # recipe defining the sequence of jobs to be performed
         self.recipe = recipe
@@ -51,40 +50,40 @@ class Pipeline():
         self.output = self.buffers[-1]
         # Create stages and connect them to the buffers
         self.stages = [Stage(name=self.recipe.stage_names[i],
-                             WorkerClass=self.recipe.stage_type[i],
+                             WorkerClass=self.recipe.stage_types[i],
                              num_workers=self.num_stageworkers,
                              pipeline=self,
                              in_buffer=self.buffers[i],
                              out_buffer=self.buffers[i+1],
-                             seq_number=i) for i in range(num_stages)]
+                             seq_number=i) for i in range(self.num_stages)]
         # Set state to inactive
         self.isactive = False
 
         
-    def put(self, picture)
+    def put(self, picture):
         """Put a Job object into the pipeline"""
         self.input.put((picture, jobnr))
         
-    def get_progress(self)
+    def get_progress(self):
         """Returns a list of the number of jobs in each queue"""
         return [b.qsize() for b in self.buffers]
     
-    def start(self)
+    def start(self):
         """Start all workers"""
         [s.start() for s in self.stages]
         self.isactive = True
 
-    def flush(self)
+    def flush(self):
         """Flushes all queues"""
         # TODO: How to flush queues?
         raise(NotImplementedError('Queue flushing'))
         
-    def stop(self)
+    def stop(self):
         """Stops all workers"""
         [s.stop() for s in self.stages]
         self.isactive = False
         
-    def abort(self)
+    def abort(self):
         """Immediately terminate all worker threads and flush queues"""
         # FIXME: Is it possible to kill threads?
 #        raise(NotImplementedError('Aborting pipline'))

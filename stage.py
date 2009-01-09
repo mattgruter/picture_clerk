@@ -13,6 +13,8 @@ __license__ = "GPL"
 
 import Queue
 
+import config
+
 
 #class StageState():
 #    INACTIVE = 0   # stage is empty, no workers created
@@ -25,25 +27,26 @@ class Stage():
     A stage is a segment in a pipeline defining the type of workers it employs.
     """
 
-    def __init__(self, name, WorkerClass, num_worker, pipeline, in_buffer,
+    def __init__(self, name, WorkerClass, num_workers, pipeline, in_buffer,
                  out_buffer, seq_number):
         self.name = name
         self.WorkerClass = WorkerClass
-        self.num_worker = num_worker
+        self.num_workers = num_workers
         self.pipeline = pipeline
         self.input = in_buffer
         self.output = out_buffer
         self.seq_number = seq_number
-#        self.workers = self._create_worker(self.num_worker)
+#        self.workers = self._create_worker(self.num_workers)
         self.isactive = False
 
     def _create_worker(self, num):
-        return [ self.WorkerClass(self, self.input, self.output, './') for i in range(num) ]
+        # TODO: log to a pipeline or picture specific directory instead of "./"
+        return [ self.WorkerClass(self, self.input, self.output, config.LOGDIR) for i in range(num) ]
 
     def add_worker(self):
-        new_worker = self._create_stage_worker(1)
+        new_worker = self._create_worker(1)
         self.workers.append(new_worker)
-        self.num_worker += 1
+        self.num_workers += 1
 
     def remove_worker(self):
         self.workers.pop().join()
@@ -52,7 +55,7 @@ class Stage():
     def start(self):
         self.isactive = True
         # create worker threads
-        self.workers = self._create_worker(self.num_worker)
+        self.workers = self._create_worker(self.num_workers)
         # start threads
         [worker.start() for worker in self.workers]
 

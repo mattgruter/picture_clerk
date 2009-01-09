@@ -1,30 +1,51 @@
-import Queue
+import os
+import fnmatch
 
-from job import *
+#import Queue
+
+from recipe import *
+#from job import *
 from worker import *
-from stage import *
+#from stage import *
+from pipeline import *
 from picture import *
 
-inbuf = Queue.Queue()
-outbuf = Queue.Queue()
 
-class Pool():
-    isactive = True
-pool = Pool()
+path = './test'
+dirlist = os.listdir(path)
+files = fnmatch.filter(dirlist, "*.NEF")
+files = [ os.path.join(path, f) for f in files ]
+pics = [ Picture(f) for f in files ]
 
-pic = Picture('test/DSC_9285.NEF')
-pic2 = Picture('test/DSC_9290.NEF')
+#inbuf = Queue.Queue()
+#outbuf = Queue.Queue()
 
-inbuf.put((pic, 1))
-inbuf.put((pic2, 2))
+#inbuf.put((pic, 1))
+#inbuf.put((pic2, 2))
 
-#j = Job('sleep', [ '3' ], './', 'Sleeping for 3s')
-#for i in range(12):
-#    inbuff.put(j)
+#class Pool():
+#    isactive = True
+#pool = Pool()
     
-#s = Stage('stage', GenericWorker, 3, 'pipeline', inbuff, outbuff, 1)
+#dw = DCRawThumbWorker(pool, inbuf, outbuf, './')
+#ew = Exiv2MetadataWorker(pool, inbuf, outbuf, './')
+    
+#s = Stage('stage', DCRawThumbWorker, 3, 'pipeline', inbuf, outbuf, 1)
 
-w = DCRawThumbWorker('worker', pool, inbuf, outbuf, './')
+instructions = [Exiv2MetadataWorker, DCRawThumbWorker]
+recipe = Recipe(instructions)
+
+pl = Pipeline('TestPipe', recipe)
+
+for i, pic in enumerate(pics):
+    pl.input.put((pic, i))
+        
+print pl.get_progress()
+
+
+
+
+
 
 
 

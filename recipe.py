@@ -17,9 +17,14 @@ class Recipe():
     """
 
     def __init__(self, instructions):
-        self.stage_names = instructions
-        self.stage_types = 
-        self.stage_jobs = _parse_instructions()     
+        (self.stage_names, self.stage_types) = self._parse_instructions(instructions)
+#        self.stage_jobs = _parse_instructions(instructions)     
         self.num_stages = len(instructions)
+        
+        
+    def _parse_instructions(self, instructions):
+        """Create stage specifications from given instructions."""
+        # TODO: How should instructions look like?
+        return (instructions, instructions)
 
     

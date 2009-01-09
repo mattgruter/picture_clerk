@@ -15,6 +15,7 @@ import os
 import threading
 import Queue
 import subprocess
+import time
 
 import config
 
@@ -75,11 +76,11 @@ class Worker(threading.Thread):
                 break
             
             if self._work(picture, jobnr):   
-                self.outqueue.put(picture)
+                self.outqueue.put((picture, jobnr))
                 self.inqueue.task_done()
                 # TODO: make history more useful: exact job performed, timestamp, etc.
                 # FIXME: this has to be thread safe
-                picture.history.append(self.name)
+                picture.history.append((self.name, time.ctime()))
             else:
                 raise(Exception('Worker failed to complete job'))
         self._end_logging()
@@ -92,13 +93,14 @@ class SubprocessWorker(Worker):
     name = 'SubprocessWorker'
     
     def _compile_command(self, picture):
-    """
-    Returns command to be executed together with working directory
-    
-    This function has to be overriden by derived classes.
-        Arguments passed    : picture object
-        Arguments returned  : tuple of strings (cmd, path) 
-    """
+        """
+        Returns command to be executed together with working directory
+
+        This function has to be overriden by derived classes.
+            Arguments passed    : picture object
+            Arguments returned  : tuple of strings (cmd, path)
+        """
+        
         pass    # Override me in derived class
         return (None, None)
     
@@ -122,7 +124,7 @@ class SubprocessWorker(Worker):
         
         
 class DCRawThumbWorker(SubprocessWorker):
-    """DCRawThumbWorker is subprocess worker that uses DCRaw to extract thumbnails"""
+    """DCRawThumbWorker is a subprocess worker that uses DCRaw to extract thumbnails."""
     
     name = 'DCRawThumbWorker'
     _bin = config.DCRAW_BIN
@@ -130,6 +132,20 @@ class DCRawThumbWorker(SubprocessWorker):
     
     def _compile_command(self, picture):
         cmd = [ self._bin, self._args, picture.path ]
+        path = os.path.dirname(picture.path)
+        return (cmd, path)
+
+
+class Exiv2MetadataWorker(SubprocessWorker):
+    """Exiv2MetadataWorker is a subprocess worker that uses Exiv2 to extract metadata."""
+    
+    name = 'Exiv2MetadataWorker'
+    _bin = config.EXIV2_BIN
+    _args = ['-e', 'X', 'ex']
+    
+    def _compile_command(self, picture):
+        # FIXME: This is ugly
+        cmd = [ self._bin ] + self._args + [ picture.path ]
         path = os.path.dirname(picture.path)
         return (cmd, path)
 
