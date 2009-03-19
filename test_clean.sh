@@ -1,7 +1,7 @@
 #!/bin/sh
 
-cd test
-rm -f *.err *.log *.xmp *.thumb.jpg
+cd test_album
+rm -f *.err *.log *.xmp *.thumb.jpg *.sha1
 rm -rf .git/
 cd ..
 

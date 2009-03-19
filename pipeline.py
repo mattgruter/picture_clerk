@@ -56,13 +56,17 @@ class Pipeline():
                              in_buffer=self.buffers[i],
                              out_buffer=self.buffers[i+1],
                              seq_number=i) for i in range(self.num_stages)]
+        # jobnr is a simple counter of jobs that have been or still are processed
+        self.jobnr = 0
         # Set state to inactive
         self.isactive = False
 
         
     def put(self, picture):
         """Put a Job object into the pipeline"""
-        self.input.put((picture, jobnr))
+        # FIXME: make access to self.jobnr thread-safe (locking)
+        self.jobnr += 1
+        self.input.put((picture, self.jobnr))
         
     def get_progress(self):
         """Returns a list of the number of jobs in each queue"""

@@ -11,7 +11,7 @@ from pipeline import *
 from picture import *
 
 
-path = './test'
+path = '../test_album'
 dirlist = os.listdir(path)
 files = fnmatch.filter(dirlist, "*.NEF")
 files = [ os.path.join(path, f) for f in files ]
@@ -32,13 +32,13 @@ pics = [ Picture(f) for f in files ]
     
 #s = Stage('stage', DCRawThumbWorker, 3, 'pipeline', inbuf, outbuf, 1)
 
-instructions = [Exiv2MetadataWorker, DCRawThumbWorker]
+instructions = [Exiv2MetadataWorker, DCRawThumbWorker, HashDigestWorker]
 recipe = Recipe(instructions)
 
 pl = Pipeline('TestPipe', recipe)
 
-for i, pic in enumerate(pics):
-    pl.input.put((pic, i))
+for pic in pics:
+    pl.put(pic)
         
 print pl.get_progress()
 

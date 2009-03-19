@@ -17,7 +17,7 @@ import os.path
 
 class PictureFileType():
     RAW = 0
-    JPG = 1
+    JPEG = 1
 
 
 class Picture():
@@ -35,13 +35,50 @@ class Picture():
         if not os.path.exists(path):
             print "Invalid path."
             sys.exit(1)
+        # file basename and extension (e.g. DSC_9352 and NEF)
+        (self.basename, self.extension) = os.path.splitext(self.path)
         # FIXME: extract file type from given filename
         self.filetype = PictureFileType.RAW
         # sidecar files
-        self.sidecar = []
+        self._sidecars = set([])
         # metadata
         #self.metadata = 
         # history
         self.history = []
+                    
+    def __str__(self):
+        return self.path
+        
+    def add_sidecar(self, path, content_type):
+        sidecar = Sidecar(path, content_type)
+        sidecar.picture = self
+        self._sidecars.add(sidecar)
+        
+    def del_sidecar(self, sidecar):
+        self._sidecars.discard(sidecar)
+        sidecar.picture = None
 
+    def list_sidecars(self):
+        return self._sidecars
+
+
+class Sidecar():
+    """
+    A Sidecar object holds the path and the type of content of a sidecar file.
+    In addition it stores a reference to the picture object it associated to.
+    
+    Constructor arguments:
+        path (string)           :   absolute path to the sidecar file
+        content_type (string)   :   content type (e.g. checksum, thumbnail, xmp, ...)
+    """
+    def __init__(self, path, content_type):
+        self.path = os.path.realpath(path)
+        if not os.path.exists(path):
+            print "Invalid path."
+            sys.exit(1)
+        self.content_type = content_type
+        self.picture = None
+        
+    def __str__(self):
+        return '%s: %s' % (self.content_type, self.path)
 

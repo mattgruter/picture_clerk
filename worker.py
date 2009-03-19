@@ -1,3 +1,4 @@
+from __future__ import with_statement
 """worker.py
 
 PictureClerk - The little helper for your picture workflow.
@@ -16,6 +17,7 @@ import threading
 import Queue
 import subprocess
 import time
+import hashlib
 
 import config
 
@@ -53,6 +55,19 @@ class Worker(threading.Thread):
         pass    # Override me in derived class
         return False
         
+    def _compile_sidecar_path(self, picture):
+        """
+        Returns path and content type of generated sidecar file by the worker
+        
+        This function has to be overriden by derived class if sidecar files are
+        generated.
+            Arguments passed    : picture object
+            Arguments returned  : tuple of strings (path, content_type)
+        """
+        
+        pass    # Override me in derived class
+        return None
+        
     def _init_logging(self):
         self.outfile = self.logpath + '/' + self.name + '.log'
         self.outfile_handle=open(self.outfile, 'w')
@@ -81,14 +96,45 @@ class Worker(threading.Thread):
                 # TODO: make history more useful: exact job performed, timestamp, etc.
                 # FIXME: this has to be thread safe
                 picture.history.append((self.name, time.ctime()))
+                sidecar = self._compile_sidecar_path(picture)
+                if sidecar:
+                    picture.add_sidecar(*sidecar)
             else:
                 raise(Exception('Worker failed to complete job'))
         self._end_logging()
             
 
+class HashDigestWorker(Worker):
+    """HashDigestWorker class derived from Worker calculates hash digests of picture files."""
+    
+    name = 'HashDigestWorker'
+    
+    def _work(self, picture, jobnr):
+        # TODO: catch exceptions of not accessible files
+        print self.name, "(", jobnr, "): ..."
+        with open(picture.path, 'rb') as pic:
+            buf = pic.read()
+        digest = hashlib.sha1(buf).hexdigest()
+        
+        # write digest to a sidecar file     
+        (hash_file, content_type) = self._compile_sidecar_path(picture)
+        with open(hash_file, 'w') as f:
+            f.write(digest + '  ' + os.path.basename(picture.path) + '\n')    
+        
+        print self.name, "(", jobnr, "): Ok."
+
+        # FIXME: Return something useful
+        return True
+        
+    def _compile_sidecar_path(self, picture):
+        path = picture.basename + '.sha1'
+        content_type = 'Checksum'
+        return (path, content_type)    
+
+
 # TODO: check return code of subprocess
 class SubprocessWorker(Worker):
-    """Subprocess worker class derived from Worker executes external programs."""
+    """SubprocessWorker class derived from Worker executes external programs."""
     
     name = 'SubprocessWorker'
     
@@ -124,7 +170,9 @@ class SubprocessWorker(Worker):
         
         
 class DCRawThumbWorker(SubprocessWorker):
-    """DCRawThumbWorker is a subprocess worker that uses DCRaw to extract thumbnails."""
+    """
+    DCRawThumbWorker is a subprocess worker that uses DCRaw to extract thumbnails.
+    """
     
     name = 'DCRawThumbWorker'
     _bin = config.DCRAW_BIN
@@ -134,10 +182,17 @@ class DCRawThumbWorker(SubprocessWorker):
         cmd = [ self._bin, self._args, picture.path ]
         path = os.path.dirname(picture.path)
         return (cmd, path)
+        
+    def _compile_sidecar_path(self, picture):
+        path = picture.basename + '.thumb.jpg'
+        content_type = 'Thumbnail'
+        return (path, content_type)    
 
 
 class Exiv2MetadataWorker(SubprocessWorker):
-    """Exiv2MetadataWorker is a subprocess worker that uses Exiv2 to extract metadata."""
+    """
+    Exiv2MetadataWorker is a subprocess worker that uses Exiv2 to extract metadata.
+    """
     
     name = 'Exiv2MetadataWorker'
     _bin = config.EXIV2_BIN
@@ -148,6 +203,30 @@ class Exiv2MetadataWorker(SubprocessWorker):
         cmd = [ self._bin ] + self._args + [ picture.path ]
         path = os.path.dirname(picture.path)
         return (cmd, path)
+        
+    def _compile_sidecar_path(self, picture):
+        path = picture.basename + '.xmp'
+        content_type = 'XMP Metadata'
+        return (path, content_type)
+        
+        
+class GitAddWorker(SubprocessWorker):
+    """
+    GitAddWorker adds pictures to a git repository
+    """
+    
+    # FIXME: Only one git instance can work on repository -> git repo lock.
+    # TODO: Git would be many times faster if it worked on several pictures at once.
+    
+    name = 'GitAddWorker'
+    _bin = config.GIT_BIN
+    _args = 'add'
+    
+    def _compile_command(self, picture):
+        cmd = [ self._bin, self._args, picture.path ]
+        path = os.path.dirname(picture.path)
+        return (cmd, path)
+    
 
                     
 # Unit test       
