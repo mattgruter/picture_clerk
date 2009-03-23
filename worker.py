@@ -92,13 +92,13 @@ class Worker(threading.Thread):
             
             if self._work(picture, jobnr):   
                 self.outqueue.put((picture, jobnr))
-                self.inqueue.task_done()
                 # TODO: make history more useful: exact job performed, timestamp, etc.
                 # FIXME: this has to be thread safe
                 picture.history.append((self.name, time.ctime()))
                 sidecar = self._compile_sidecar_path(picture)
                 if sidecar:
                     picture.add_sidecar(*sidecar)
+                self.inqueue.task_done()
             else:
                 raise(Exception('Worker failed to complete job'))
         self._end_logging()

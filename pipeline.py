@@ -74,8 +74,8 @@ class Pipeline():
     
     def start(self):
         """Start all workers"""
-        [s.start() for s in self.stages]
         self.isactive = True
+        [s.start() for s in self.stages]
 
     def flush(self):
         """Flushes all queues"""
@@ -83,7 +83,10 @@ class Pipeline():
         raise(NotImplementedError('Queue flushing'))
         
     def stop(self):
-        """Stops all workers"""
+        """
+        Stops all workers.
+        Blocks until all workers have completed their current job.
+        """
         [s.stop() for s in self.stages]
         self.isactive = False
         
@@ -91,9 +94,18 @@ class Pipeline():
         """Immediately terminate all worker threads and flush queues"""
         # FIXME: Is it possible to kill threads?
 #        raise(NotImplementedError('Aborting pipline'))
-        print('Aborting is not implemented yet. Stopping instead.')
+        print('Aborting is not implemented yet. Stopping instead and flushing queues.')
         self.stop()
         self.flush()
+        
+    def join(self):
+        """
+        Finish all pending jobs.
+        Blocks until all stages' input queues are empty.
+        """
+        [s.join() for s in self.stages]
+        self.isactive = False
+        
     
 
 # Unit test       

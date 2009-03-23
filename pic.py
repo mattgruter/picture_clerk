@@ -53,10 +53,13 @@ def import_dir(path, verbose):
     for pic in pics:
         pl.put(pic)
     pl.start()
-    # waits until all workers have finished
-    # FIXME: wait until all workers have finished
-    # TODO: implement a pl.join or pl.finish method
-    #pl.finsih()
+    # waits until all jobs are completed.
+    pl.join()
+    # FIXME: repalce pl.join with a while pl.isactive loop with progress
+    # display. For this pl.isactive has to be set to False after all jobs have
+    # completed...
+#    while pl.isactive:
+#        print pl.get_progress()
     
     return pics
     
@@ -64,6 +67,23 @@ def import_dir(path, verbose):
 def list_pics(pics, verbose):
     for pic in pics:
         print pic
+
+
+def clean_dir(pics, cache_file, verbose):
+    for pic in pics:
+        print 'Removing all associated sidecar files of %s.' % pic.path
+        for s in pic._sidecars:
+            try:
+                os.remove(s.path)
+            except OSError:
+                print 'Error: Unable to remove %s.' % s.path
+                sys.exit(1)
+    print 'Removing local cache file %s.' % cache_file
+    try:
+        os.remove(cache_file)
+    except OSError:
+        print 'Error: Unable to remove %s.' % cache_file
+        sys.exit(1)
 
     
 def check_dir(pics, verbose):
@@ -106,6 +126,9 @@ def main():
         elif cmd == "list":
             pics = read_cache(cache, opt.verbose)
             list_pics(pics, opt.verbose)
+        elif cmd == "clean":
+            pics = read_cache(cache, opt.verbose)
+            clean_dir(pics, cache_file, opt.verbose)
         elif cmd == "check":
             pics = read_cache(cache, opt.verbose)
             raise NotImplementedError

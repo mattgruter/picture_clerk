@@ -60,8 +60,19 @@ class Stage():
         [worker.start() for worker in self.workers]
 
     def stop(self):
+        """
+        Block until all workers have finished current job. Input queue does not
+        have to be empty. 
+        """
         self.isactive = False
         [worker.join() for worker in self.workers]
+        
+    def join(self):
+        """
+        Block until the input queue is empty.    
+        """
+        self.input.join()
+        self.isactive = False
         
         
 # Unit test       
