@@ -115,6 +115,8 @@ class HashDigestWorker(Worker):
         with open(picture.path, 'rb') as pic:
             buf = pic.read()
         digest = hashlib.sha1(buf).hexdigest()
+        # TODO: no sidecar file needed?
+        picture.checksum = digest
         
         # write digest to a sidecar file     
         (hash_file, content_type) = self._compile_sidecar_path(picture)

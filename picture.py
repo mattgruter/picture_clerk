@@ -39,6 +39,9 @@ class Picture():
         (self.basename, self.extension) = os.path.splitext(self.path)
         # FIXME: extract file type from given filename
         self.filetype = PictureFileType.RAW
+        # checksum
+        # TODO: type of checksum (CRC32, MD5, SHA1, SHA256, etc.) should also be saved
+        self.checksum = None
         # sidecar files
         self._sidecars = set([])
         # metadata
@@ -47,7 +50,10 @@ class Picture():
         self.history = []
                     
     def __str__(self):
-        return self.path
+        rtn = self.path
+        for s in self._sidecars:
+            rtn += ('\n  %s: %s' % (s.content_type, s.path))
+        return rtn
         
     def add_sidecar(self, path, content_type):
         sidecar = Sidecar(path, content_type)

@@ -24,5 +24,8 @@ GIT_BIN = '/usr/bin/git'
 # full path to exiv2 executable
 EXIV2_BIN = '/usr/bin/exiv2'
 
+# cache file name
+CACHE_FILE = '.pic.db'
+
 # logging dir
 LOGDIR='./log'
