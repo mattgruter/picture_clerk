@@ -35,6 +35,11 @@ class Picture():
         if not os.path.exists(path):
             print "Invalid path."
             sys.exit(1)
+        # FIXME: what is needed? dir, filename, basename, extension? everything?
+        # FIXME: ensure that these are always updated when path changes and make
+        # read-only
+        # base directory and filename
+        (self.dir, self.filename) = os.path.split(self.path)
         # file basename and extension (e.g. DSC_9352 and NEF)
         (self.basename, self.extension) = os.path.splitext(self.path)
         # FIXME: extract file type from given filename
@@ -59,6 +64,9 @@ class Picture():
         sidecar = Sidecar(path, content_type)
         sidecar.picture = self
         self._sidecars.add(sidecar)
+        # if sidecar is a thumbnail, replace the existing thumbnail with this one.
+        if content_type == "Thumbnail":
+            self.thumbnail = path
         
     def del_sidecar(self, sidecar):
         self._sidecars.discard(sidecar)
@@ -68,7 +76,7 @@ class Picture():
         return self._sidecars
 
 
-class Sidecar():
+class Sidecar(object):
     """
     A Sidecar object holds the path and the type of content of a sidecar file.
     In addition it stores a reference to the picture object it associated to.
@@ -87,4 +95,14 @@ class Sidecar():
         
     def __str__(self):
         return '%s: %s' % (self.content_type, self.path)
+        
 
+#class Thumbnail(Sidecar):
+#    """
+#    Thumbnail object
+#    
+#    Constructor arguments:
+#        path (string)   :   absolute path to the thumbnail file    
+#    """
+#    def __init__(self, path):
+#        Sidecar.__init__(self, path, content_type="Thumbnail")      

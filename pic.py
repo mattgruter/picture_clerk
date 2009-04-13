@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """pic.py
 
 PictureClerk - The little helper for your picture workflow.
@@ -85,6 +86,29 @@ def clean_dir(pics, cache_file, verbose):
         print 'Error: Unable to remove %s.' % cache_file
         sys.exit(1)
 
+
+def show_dir(pics, verbose):
+    if verbose:
+        print 'Starting image viewer QIV...'
+    args = [ 'qiv', '-mt']
+    args.extend(pic.thumbnail for pic in pics)
+    try:
+        viewer_process = subprocess.Popen(args, shell=False)
+        retcode = viewer_process.wait()
+        #retcode = subprocess.call(args, shell=False)
+        if retcode < 0:
+            print >>sys.stderr, "Child was terminated by signal", -retcode
+    except OSError, e:
+        print >>sys.stderr, "Execution failed:", e
+    
+    
+def list_checksums(pics, verbose):
+    filenames = [pic.basename+pic.extension for pic in pics]
+    checksums = [pic.checksum for pic in pics]
+    # FIXME: ugly loop
+    for (i, f) in enumerate(filenames):
+        print '%s  %s' % (checksums[i], filenames[i])
+    
     
 def check_dir(pics, verbose):
     pass
@@ -129,6 +153,13 @@ def main():
         elif cmd == "clean":
             pics = read_cache(cache, opt.verbose)
             clean_dir(pics, cache_file, opt.verbose)
+        elif cmd == "show":
+            pics = read_cache(cache, opt.verbose)
+            show_dir(pics, opt.verbose)
+        elif cmd == "checksums":
+            # TODO: add this to 'list' command with a checksum flag
+            pics = read_cache(cache, opt.verbose)
+            list_checksums(pics, opt.verbose)
         elif cmd == "check":
             pics = read_cache(cache, opt.verbose)
             raise NotImplementedError

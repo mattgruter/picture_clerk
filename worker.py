@@ -87,7 +87,11 @@ class Worker(threading.Thread):
                 # get next queue item, block for WORKER_TIMEOUT seconds if empty
                 (picture, jobnr) = self.inqueue.get(True, config.WORKER_TIMEOUT)
             except Queue.Empty:
-                print self.name, ": Nothing more to do. Exiting..."
+                # TODO: should threads really exit on their own or should some
+                # sort of dispatcher terminate them as soon as they are not
+                # needed anymore (i.e. no more jobs left)? Propably yes.
+                # TODO: fix logging to file
+#                print self.name, ": Nothing more to do. Exiting..."
                 break
             
             if self._work(picture, jobnr):   
@@ -111,7 +115,8 @@ class HashDigestWorker(Worker):
     
     def _work(self, picture, jobnr):
         # TODO: catch exceptions of not accessible files
-        print self.name, "(", jobnr, "): ..."
+        # TODO: fix logging to file
+#        print self.name, "(", jobnr, "): ..."
         with open(picture.path, 'rb') as pic:
             buf = pic.read()
         digest = hashlib.sha1(buf).hexdigest()
@@ -122,8 +127,8 @@ class HashDigestWorker(Worker):
         (hash_file, content_type) = self._compile_sidecar_path(picture)
         with open(hash_file, 'w') as f:
             f.write(digest + '  ' + os.path.basename(picture.path) + '\n')    
-        
-        print self.name, "(", jobnr, "): Ok."
+        # TODO: fix logging to file
+#        print self.name, "(", jobnr, "): Ok."
 
         # FIXME: Return something useful
         return True
@@ -158,12 +163,15 @@ class SubprocessWorker(Worker):
             self.process = subprocess.Popen(cmd, shell=False, cwd=path,
                                             stdout=self.outfile_handle,
                                             stderr=self.errfile_handle)
-            print self.name, "(", jobnr, "): ..."
+            # TODO: fix logging to file
+#            print self.name, "(", jobnr, "): ..."
             retcode = self.process.wait()
             if retcode < 0:
                 print >>sys.stderr, self.name, "(", jobnr, "): ERROR - ", cmd, " terminated with signal", -retcode
             else:
-                print self.name, "(", jobnr, "): Ok."
+                # TODO: fix logging to file
+#                print self.name, "(", jobnr, "): Ok."
+                pass
         except OSError, e:
             print >>sys.stderr, self.name, "(", jobnr, "): ERROR - ", cmd, " execution failed:", e
             
@@ -175,6 +183,8 @@ class DCRawThumbWorker(SubprocessWorker):
     """
     DCRawThumbWorker is a subprocess worker that uses DCRaw to extract thumbnails.
     """
+    
+    #TODO: autorot thumbnail pictures
     
     name = 'DCRawThumbWorker'
     _bin = config.DCRAW_BIN
