@@ -32,7 +32,7 @@ pics = [ Picture(f) for f in files ]
     
 #s = Stage('stage', DCRawThumbWorker, 3, 'pipeline', inbuf, outbuf, 1)
 
-instructions = [Exiv2MetadataWorker, DCRawThumbWorker, HashDigestWorker]
+instructions = [Exiv2MetadataWorker, DCRawThumbWorker, HashDigestWorker, AutorotWorker]
 recipe = Recipe(instructions)
 
 pl = Pipeline('TestPipe', recipe)

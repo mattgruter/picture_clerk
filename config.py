@@ -23,6 +23,8 @@ DCRAW_BIN = '/usr/bin/dcraw'
 GIT_BIN = '/usr/bin/git'
 # full path to exiv2 executable
 EXIV2_BIN = '/usr/bin/exiv2'
+# full path to jhead executable
+JHEAD_BIN = '/usr/bin/jhead'
 
 # cache file name
 CACHE_FILE = '.pic.db'

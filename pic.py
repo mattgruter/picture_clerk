@@ -47,7 +47,7 @@ def import_dir(path, verbose):
     files = [ os.path.join(path, f) for f in files ]
     pics = [ Picture(f) for f in files ]
 
-    instructions = [Exiv2MetadataWorker, DCRawThumbWorker, HashDigestWorker]
+    instructions = [Exiv2MetadataWorker, DCRawThumbWorker, HashDigestWorker, AutorotWorker]
     recipe = Recipe(instructions)
 
     pl = Pipeline('Pipeline1', recipe)

@@ -30,6 +30,11 @@ import config
 # TODO: error/execption handling in thread class or outside?
 # TODO: unit tests
 # TODO: queue_timeout should be controlled by stage or pipleine resp. workertype
+# TODO: implement batch workers: they take several pictures from a queue and
+#       process in the same run due to better efficiency (typically subprocess
+#       workers to circumvent large process starting overhead).
+# TODO: _compile_sidecar_path in Worker and _compile_command in Subprocess class
+#       should return dictionaries insteaf of tuples
 # FIXME: all write to writable picture attributes has to be thread safe
 class Worker(threading.Thread):
     """Worker is a thread class who works on jobs coming from a queue.
@@ -158,22 +163,23 @@ class SubprocessWorker(Worker):
         return (None, None)
     
     def _work(self, picture, jobnr):
-        (cmd, path) = self._compile_command(picture)
+        command = self._compile_command(picture)
         try:
-            self.process = subprocess.Popen(cmd, shell=False, cwd=path,
+            self.process = subprocess.Popen(command['cmd'], shell=False,
+                                            cwd=command['path'],
                                             stdout=self.outfile_handle,
                                             stderr=self.errfile_handle)
             # TODO: fix logging to file
 #            print self.name, "(", jobnr, "): ..."
             retcode = self.process.wait()
             if retcode < 0:
-                print >>sys.stderr, self.name, "(", jobnr, "): ERROR - ", cmd, " terminated with signal", -retcode
+                print >>sys.stderr, self.name, "(", jobnr, "): ERROR - ", command['cmd'], " terminated with signal", -retcode
             else:
                 # TODO: fix logging to file
 #                print self.name, "(", jobnr, "): Ok."
                 pass
         except OSError, e:
-            print >>sys.stderr, self.name, "(", jobnr, "): ERROR - ", cmd, " execution failed:", e
+            print >>sys.stderr, self.name, "(", jobnr, "): ERROR - ", command['cmd'], " execution failed:", e
             
         # FIXME: Return something useful
         return True
@@ -191,9 +197,9 @@ class DCRawThumbWorker(SubprocessWorker):
     _args = '-e'
     
     def _compile_command(self, picture):
-        cmd = [ self._bin, self._args, picture.path ]
-        path = os.path.dirname(picture.path)
-        return (cmd, path)
+        _cmd = [ self._bin, self._args, picture.path ]
+        _path = os.path.dirname(picture.path)
+        return dict(cmd=_cmd, path=_path)
         
     def _compile_sidecar_path(self, picture):
         path = picture.basename + '.thumb.jpg'
@@ -212,15 +218,33 @@ class Exiv2MetadataWorker(SubprocessWorker):
     
     def _compile_command(self, picture):
         # FIXME: This is ugly
-        cmd = [ self._bin ] + self._args + [ picture.path ]
-        path = os.path.dirname(picture.path)
-        return (cmd, path)
+        _cmd = [ self._bin ] + self._args + [ picture.path ]
+        _path = os.path.dirname(picture.path)
+        return dict(cmd=_cmd, path=_path)
         
     def _compile_sidecar_path(self, picture):
         path = picture.basename + '.xmp'
         content_type = 'XMP Metadata'
         return (path, content_type)
-        
+       
+       
+class AutorotWorker(SubprocessWorker):
+    """
+    AutorotWorker is a subprocess worker using the jhead tool to automatically
+    rotate thumbnails according to their EXIF header.
+    """
+    
+    name = 'AutorotWorker'
+    _bin = config.JHEAD_BIN
+    _args = '-autorot'
+    
+    def _compile_command(self, picture):
+        # FIXME: This is ugly
+        _cmd = [ self._bin, self._args, picture.thumbnail ]
+        _path = os.path.dirname(picture.thumbnail)
+        return dict(cmd=_cmd, path=_path)
+
+ 
         
 class GitAddWorker(SubprocessWorker):
     """
@@ -235,9 +259,9 @@ class GitAddWorker(SubprocessWorker):
     _args = 'add'
     
     def _compile_command(self, picture):
-        cmd = [ self._bin, self._args, picture.path ]
-        path = os.path.dirname(picture.path)
-        return (cmd, path)
+        _cmd = [ self._bin, self._args, picture.path ]
+        _path = os.path.dirname(picture.path)
+        return dict(cmd=_cmd, path=_path)
     
 
                     
