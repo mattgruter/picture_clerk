@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import with_statement
 """pic.py
 
 PictureClerk - The little helper for your picture workflow.
@@ -103,16 +104,26 @@ def show_dir(pics, verbose):
     
     
 def list_checksums(pics, verbose):
-    filenames = [pic.basename+pic.extension for pic in pics]
-    checksums = [pic.checksum for pic in pics]
-    # FIXME: ugly loop
-    for (i, f) in enumerate(filenames):
-        print '%s  %s' % (checksums[i], filenames[i])
+    output = ('%s  %s' % (p.basename+p.extension, p.checksum) for p in pics)
+    for line in output:
+        print line
     
     
 def check_dir(pics, verbose):
-    pass
-    
+    # TODO: use worker threads to check checksums
+    import hashlib
+    for pic in pics:
+        try:
+            with open(pic.path, 'rb') as pic_file:
+                _buf = pic_file.read()
+        except IOError:
+            print 'NOT FOUND: %s' % pic.filename
+            continue
+        _digest = hashlib.sha1(_buf).hexdigest()
+        if _digest != pic.checksum:
+            print 'FAILED:    %s' % pic.filename
+        elif verbose:
+            print 'OK:        %s' % pic.filename
 
 def update_dir(pics, path, verbose):
     pass
@@ -162,7 +173,6 @@ def main():
             list_checksums(pics, opt.verbose)
         elif cmd == "check":
             pics = read_cache(cache, opt.verbose)
-            raise NotImplementedError
             check_dir(pics, opt.verbose)
         elif cmd == "update":
             pics = read_cache(cache, opt.verbose)
