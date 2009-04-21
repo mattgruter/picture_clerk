@@ -139,9 +139,9 @@ class HashDigestWorker(Worker):
         return True
         
     def _compile_sidecar_path(self, picture):
-        path = picture.basename + '.sha1'
-        content_type = 'Checksum'
-        return (path, content_type)    
+        _path = os.path.join(picture.dir, picture.basename + '.sha1')
+        _content_type = 'Checksum'
+        return (_path, _content_type)    
 
 
 # TODO: check return code of subprocess
@@ -202,9 +202,9 @@ class DCRawThumbWorker(SubprocessWorker):
         return dict(cmd=_cmd, path=_path)
         
     def _compile_sidecar_path(self, picture):
-        path = picture.basename + '.thumb.jpg'
-        content_type = 'Thumbnail'
-        return (path, content_type)    
+        _path = os.path.join(picture.dir, picture.basename + '.thumb.jpg')
+        _content_type = 'Thumbnail'
+        return (_path, _content_type)    
 
 
 class Exiv2MetadataWorker(SubprocessWorker):
@@ -223,9 +223,9 @@ class Exiv2MetadataWorker(SubprocessWorker):
         return dict(cmd=_cmd, path=_path)
         
     def _compile_sidecar_path(self, picture):
-        path = picture.basename + '.xmp'
-        content_type = 'XMP Metadata'
-        return (path, content_type)
+        _path = os.path.join(picture.dir, picture.basename + '.xmp')
+        _content_type = 'XMP Metadata'
+        return (_path, _content_type)
        
        
 class AutorotWorker(SubprocessWorker):

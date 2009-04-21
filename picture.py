@@ -20,7 +20,7 @@ class PictureFileType():
     JPEG = 1
 
 
-class Picture():
+class Picture(object):
     """
     A Picture object stores the history, metadata, sidecar files and more for a
     picture file.
@@ -28,20 +28,19 @@ class Picture():
     Constructor arguments:
         path (string)   :   absolute path to the picture file
     """
-
     def __init__(self, path):
+        # TODO: Maybe use descriptors for this
         # TODO: Maybe test if two pictures are the same file using os.path.samefile
+        assert os.path.exists(path), "invalid path: %s" % path
         self.path = os.path.realpath(path)
-        if not os.path.exists(path):
-            print "Invalid path."
-            sys.exit(1)
         # FIXME: what is needed? dir, filename, basename, extension? everything?
         # FIXME: ensure that these are always updated when path changes and make
-        # read-only
+        #        read-only
+        # FIXME: or lazy evalution: execute split() when attribute is accessed.
         # base directory and filename
         (self.dir, self.filename) = os.path.split(self.path)
         # file basename and extension (e.g. DSC_9352 and NEF)
-        (self.basename, self.extension) = os.path.splitext(self.path)
+        (self.basename, self.extension) = os.path.splitext(self.filename)
         # FIXME: extract file type from given filename
         self.filetype = PictureFileType.RAW
         # checksum
@@ -59,8 +58,13 @@ class Picture():
         for s in self._sidecars:
             rtn += ('\n  %s: %s' % (s.content_type, s.path))
         return rtn
+               
+    def get_files(self):
+        _sidecar_files = [sidecar.path for sidecar in self._sidecars]
+        return [self.path] + _sidecar_files
         
     def add_sidecar(self, path, content_type):
+        # TODO: Maybe use descriptors for this
         sidecar = Sidecar(path, content_type)
         sidecar.picture = self
         self._sidecars.add(sidecar)
@@ -86,10 +90,10 @@ class Sidecar(object):
         content_type (string)   :   content type (e.g. checksum, thumbnail, xmp, ...)
     """
     def __init__(self, path, content_type):
+        assert os.path.exists(path), "invalid path: %s" % path
         self.path = os.path.realpath(path)
-        if not os.path.exists(path):
-            print "Invalid path."
-            sys.exit(1)
+        # base directory and filename
+        (self.dir, self.filename) = os.path.split(self.path)
         self.content_type = content_type
         self.picture = None
         

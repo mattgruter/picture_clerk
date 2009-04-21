@@ -29,5 +29,8 @@ JHEAD_BIN = '/usr/bin/jhead'
 # cache file name
 CACHE_FILE = '.pic.db'
 
+# file pattern for import
+IMPORT_FILE_PATTERN = '*.NEF'
+
 # logging dir
 LOGDIR='./log'
