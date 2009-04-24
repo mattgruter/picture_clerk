@@ -16,13 +16,13 @@ import os
 import sys
 import fnmatch
 import shelve
-import time
 
 from recipe import *
 from worker import *
 from pipeline import *
 from picture import *
 from config import *
+from qivcontrol import *
 
 
 def read_cache(cache, verbose):
@@ -71,7 +71,8 @@ def import_dir(path, verbose):
     # completed...
 #    while pl.isactive:
 #        print pl.get_progress()
-    
+ 
+    pl.join()
     return pics
     
 
@@ -160,18 +161,29 @@ def delete_tree(root):
         
 
 def show_dir(pics, path, verbose):
+    import time
     if verbose:
         print 'Starting image viewer QIV...'
-    args = [ 'qiv', '-t']
-    args.extend(sorted(os.path.join(path, pic.thumbnail) for pic in pics))
-    try:
-        viewer_process = subprocess.Popen(args, shell=False)
-        retcode = viewer_process.wait()
-        #retcode = subprocess.call(args, shell=False)
-        if retcode < 0:
-            print >>sys.stderr, "Child was terminated by signal", -retcode
-    except OSError, e:
-        print >>sys.stderr, "Execution failed:", e
+    qivCtrl = QivController('qiv', ['-m', 't'], pics, path)
+    qivCtrl.start()
+    qivCtrl.join()
+    if verbose:
+        print 'QIV exited.'
+    # TODO: QivController should return a list of Picture references instead of
+    #       a list of thumbnail files in trash (path2pic within QivController?)
+    trashContent = path2pic(qivCtrl.getTrashContent(), pics, verbose)
+    trashPath = qivCtrl.getTrashPath()
+    if trashContent:
+        print 'Deleted pictures:'
+        for pic in trashContent:
+            print '  %s' % pic.filename
+            # move deleted thumbnails back into original directory
+            os.rename(os.path.join(trashPath, pic.thumbnail), os.path.join(path, pic.thumbnail))
+        os.rmdir(trashPath)
+        delChoice = raw_input('Do you want to permanently delete above pictures [yN]: ')
+        if delChoice == 'y' or delChoice == 'Y':
+            pics = delete_pics(trashContent, pics, path, verbose)
+    return pics
     
     
 def list_checksums(pics, verbose):
