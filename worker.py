@@ -56,7 +56,11 @@ class Worker(threading.Thread):
         self.number = number
         self.pool = pool
         self.path = path
-        self.logdir = logdir
+        if logdir:
+            self.logging = True
+            self.logdir = logdir
+        else:
+            self.logging = False
         
     def _work(self, picture, jobnr):
         pass    # Override me in derived class
@@ -76,10 +80,14 @@ class Worker(threading.Thread):
         return None
         
     def _init_logging(self):
-        _logfile = os.path.join(self.path, self.logdir, self.name + str(self.number) + '.log')
-        self.outlog_handle=open(_logfile, 'w')   # unbuffered
-        _errfile = os.path.join(self.path, self.logdir, self.name + str(self.number) + '.err')
-        self.errlog_handle=open(_errfile, 'w')   # unbuffered
+        if self.logging:
+            _logfile = os.path.join(self.path, self.logdir, self.name + str(self.number) + '.log')
+            self.outlog_handle=open(_logfile, 'w', 0)   # unbuffered
+            _errfile = os.path.join(self.path, self.logdir, self.name + str(self.number) + '.err')
+            self.errlog_handle=open(_errfile, 'w', 0)   # unbuffered
+        else:
+            self.outlog_handle = None
+            self.errlog_handle = None
         
     def _end_logging(self):
         # Closing logging file handles    
@@ -88,31 +96,40 @@ class Worker(threading.Thread):
 
     def run(self):
         self._init_logging()
-        # Keep running as long as there are jobs in queue
-        while self.pool.isactive:
-            try:
-                # get next queue item, block for WORKER_TIMEOUT seconds if empty
-                (picture, jobnr) = self.inqueue.get(True, config.WORKER_TIMEOUT)
-            except Queue.Empty:
-                # TODO: should threads really exit on their own or should some
-                # sort of dispatcher terminate them as soon as they are not
-                # needed anymore (i.e. no more jobs left)? Propably yes.
-                # TODO: fix logging to file
-#                print self.name, ": Nothing more to do. Exiting..."
-                break
-            
-            if self._work(picture, jobnr):   
-                self.outqueue.put((picture, jobnr))
-                # TODO: make history more useful: exact job performed, timestamp, etc.
-                # FIXME: this has to be thread safe
-                picture.history.append((self.name, time.ctime()))
-                sidecar = self._compile_sidecar_filename(picture)
-                if sidecar:
-                    picture.add_sidecar(*sidecar)
-                self.inqueue.task_done()
-            else:
-                raise(Exception('Worker failed to complete job'))
-        self._end_logging()
+        if self.logging: print >>self.outlog_handle, 'Starting up...'
+        
+        try:
+            while True:
+                self.pool.wakeSignal.wait()
+                if not self.pool.isactive:
+                    if self.logging: print >>self.outlog_handle, 'Terminating. Bye bye.'
+                    break
+                try:
+                    # get next queue item, block for WORKER_TIMEOUT seconds if empty
+                    (picture, jobnr) = self.inqueue.get(True, config.WORKER_TIMEOUT)
+                except Queue.Empty:
+                    pass    # try again
+                    
+                else:
+                    if self.logging: print >>self.outlog_handle, 'Loading %s...' % picture.filename
+                    if self._work(picture, jobnr):   
+                        self.outqueue.put((picture, jobnr))
+                        if self.logging: print >>self.outlog_handle, 'DONE %s' % picture.filename
+                        # TODO: make history more useful: exact job performed, timestamp, etc.
+                        # FIXME: this has to be thread safe (it is now because a
+                        #        every picture is worked on by only one worker but if
+                        #        we introduce parallel stages or piplines then we have
+                        #        to fix this.)
+                        picture.history.append((self.name, time.ctime()))
+                        sidecar = self._compile_sidecar_filename(picture)
+                        if sidecar:
+                            picture.add_sidecar(*sidecar)
+                        self.inqueue.task_done()
+                    else:
+                        raise(Exception('Worker failed to complete job'))
+        finally:
+            # ensure that _end_logging method is always called
+            if self.logging: self._end_logging()
             
 
 class HashDigestWorker(Worker):
@@ -167,6 +184,9 @@ class SubprocessWorker(Worker):
     def _work(self, picture, jobnr):
         command = self._compile_command(picture)
         try:
+            # FIXME: how to supress logging if not desired? logging to 'None'
+            #        just results in logging to stdout and stderr. The solution
+            #        also has to be thread safe (/dev/null?)
             self.process = subprocess.Popen(command, shell=False, cwd=self.path,
                                             stdout=self.outlog_handle,
                                             stderr=self.errlog_handle)
@@ -174,13 +194,13 @@ class SubprocessWorker(Worker):
 #            print self.name, "(", jobnr, "): ..."
             retcode = self.process.wait()
             if retcode < 0:
-                print >>sys.stderr, self.name, "(", jobnr, "): ERROR - ", command['cmd'], " terminated with signal", -retcode
+                if self.logging: print >>self.errlog_handle, self.name, "(", jobnr, "): ERROR - ", command, " terminated with signal", -retcode
             else:
                 # TODO: fix logging to file
 #                print self.name, "(", jobnr, "): Ok."
                 pass
         except OSError, e:
-            print >>sys.stderr, self.name, "(", jobnr, "): ERROR - ", command['cmd'], " execution failed:", e
+            if self.logging: print >>self.errlog_handle, self.name, "(", jobnr, "): ERROR - ", command, " execution failed:", e
             
         # FIXME: Return something useful
         return True

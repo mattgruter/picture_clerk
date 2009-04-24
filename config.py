@@ -12,10 +12,10 @@ __license__ = "GPL"
 
 
 # number of workers in each stage by default
-DEFAULT_NUM_STAGEWORKERS = 3
+DEFAULT_NUM_STAGEWORKERS = 5
 
 # number of seconds a worker should wait for new jobs if queue is empty
-WORKER_TIMEOUT = 5
+WORKER_TIMEOUT = 1
 
 # full path to DCRaw executable
 DCRAW_BIN = '/usr/bin/dcraw'
@@ -32,5 +32,7 @@ CACHE_FILE = '.pic.db'
 # file pattern for import
 IMPORT_FILE_PATTERN = '*.NEF'
 
+# loggin on/off
+LOGGING=True
 # logging dir
 LOGDIR='log/'

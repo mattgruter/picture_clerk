@@ -36,7 +36,7 @@ class Pipeline():
     Pipeline defines the stages of the workflow.
     """
     
-    def __init__(self, name, recipe, path, logdir):
+    def __init__(self, name, recipe, path, logdir=None):
         self.name = name
         # recipe defining the sequence of jobs to be performed
         self.recipe = recipe
@@ -61,6 +61,7 @@ class Pipeline():
         # jobnr is a simple counter of jobs that have been or still are processed
         self.jobnr = 0
         # Set state to inactive
+        # FIXME: isactive should be a descriptor and depend on stage's status
         self.isactive = False
 
         
@@ -107,7 +108,14 @@ class Pipeline():
         """
         [s.join() for s in self.stages]
         self.isactive = False
-    
+        
+    def get_progress(self):
+        """
+        Determine overall progress by checking size of output queue.
+        """
+        # TODO: is this accurate enough? it should be. Otherwise we could get
+        #       all items from output queue and then count them and add them up.
+        return self.output.qsize()
     
 
 # Unit test       

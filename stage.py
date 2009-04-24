@@ -12,8 +12,10 @@ __license__ = "GPL"
 
 
 import Queue
+import threading
 
 import config
+from dispatcher import Dispatcher
 
 
 #class StageState():
@@ -28,7 +30,7 @@ class Stage():
     """
 
     def __init__(self, name, WorkerClass, num_workers, in_buffer,
-                 out_buffer, seq_number, pipeline, path, logdir):
+                 out_buffer, seq_number, pipeline, path, logdir=None):
         self.name = name
         self.WorkerClass = WorkerClass
         self.num_workers = num_workers
@@ -38,6 +40,7 @@ class Stage():
         self.seq_number = seq_number
         self.worker_environ = dict(pool=self, path=path, logdir=logdir)
         self.isactive = False
+        self.progress = 0
 
     def _create_worker(self, num):
         return [ self.WorkerClass(self.input, self.output, i, **self.worker_environ) for i in range(num) ]
@@ -52,12 +55,18 @@ class Stage():
         self.num_woker -= 1
         
     def start(self):
+        # Global activity flag
         self.isactive = True
+        # Dispatcher-controlled Event worker threads wait for before they start
+        self.wakeSignal = threading.Event()
         # create worker threads
         self.workers = self._create_worker(self.num_workers)
+        # create dispatcher thread
+        self.dispatcher = Dispatcher(self)
         # start threads
         [worker.start() for worker in self.workers]
-
+        # start dispatcher thread
+        self.dispatcher.start()
 
     def stop(self):
         """
@@ -65,8 +74,7 @@ class Stage():
         have to be empty.
         """
         self.isactive = False
-        [worker.join() for worker in self.workers]
-        
+        self.dispatcher.join()
         
     def join(self):
         """
@@ -74,6 +82,7 @@ class Stage():
         """
         self.input.join()
         self.isactive = False
+        self.dispatcher.join()
         
         
 # Unit test       

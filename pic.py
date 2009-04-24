@@ -25,6 +25,48 @@ from config import *
 from qivcontrol import *
 
 
+class ProgressBar:
+    # (c) by Randy Pargman, Wed, 11 Dec 2002
+	def __init__(self, label='Progress', minValue = 0, maxValue=100, totalWidth=12):
+		self.progBar = "[]"   # This holds the progress bar string
+		self.label = label
+		self.min = minValue
+		self.max = maxValue
+		self.span = maxValue - minValue
+		self.width = totalWidth
+		self.amount = 0       # When amount == max, we are 100% done 
+		self.updateAmount(0)  # Build progress bar string
+
+	def updateAmount(self, newAmount):
+		if newAmount < self.min: newAmount = self.min
+		if newAmount > self.max: newAmount = self.max
+		self.amount = newAmount
+
+		# Figure out the new percent done, round to an integer
+		diffFromMin = float(self.amount - self.min)
+		percentDone = (diffFromMin / float(self.span)) * 100.0
+		percentDone = round(percentDone)
+		percentDone = int(percentDone)
+
+		# Figure out how many hash bars the percentage should be
+		allFull = self.width - 2
+		numHashes = (percentDone / 100.0) * allFull
+		numHashes = int(round(numHashes))
+
+		# build a progress bar with hashes and spaces
+		self.progBar = "[" + '#'*numHashes + ' '*(allFull-numHashes) + "]"
+
+		# figure out where to put the percentage, roughly centered
+		percentPlace = (len(self.progBar) / 2) - len(str(percentDone)) 
+		percentString = str(percentDone) + "%"
+
+		# slice the percentage into the bar
+		self.progBar = self.label + ": " + self.progBar[0:percentPlace] + percentString + self.progBar[percentPlace+len(percentString):]
+
+	def __str__(self):
+		return str(self.progBar)
+
+
 def read_cache(cache, verbose):
     # TODO: catch exceptions
     try:
@@ -41,6 +83,7 @@ def write_cache(cache, pics, verbose):
 
 
 def import_dir(path, verbose):
+    import time
     # TODO: use os.walk to search for files recursively
     dirlist = os.listdir(path)
     # TODO: what files to import? check that only NEF files are present so that
@@ -57,21 +100,50 @@ def import_dir(path, verbose):
     # pipeline instructions: retrieve metadata & thumbnail, calculate checksum, rotate thumbnails
     instructions = [Exiv2MetadataWorker, DCRawThumbWorker, HashDigestWorker, AutorotWorker]
     recipe = Recipe(instructions)
+
+    if config.LOGGING:
+        # create logfile directory if it doesn't exist yet
+        if not os.path.isdir(os.path.join(path, config.LOGDIR)):
+            try:
+                os.mkdir(os.path.join(path, config.LOGDIR))
+            except OSError:
+                print >>sys.stderr, 'Not possible to create log directory. Disabling logging.'
+                logdir = None
+            else:
+                logdir = config.LOGDIR
+    else:
+        logdir = None
     # pipeline environment variables
-    environ = dict(path=path, logdir=config.LOGDIR)
+    environ = dict(path=path, logdir=logdir)
 
     pl = Pipeline('Pipeline1', recipe, **environ)
     for pic in pics:
         pl.put(pic)
     pl.start()
-    # waits until all jobs are completed.
-    pl.join()
-    # FIXME: repalce pl.join with a while pl.isactive loop with progress
-    # display. For this pl.isactive has to be set to False after all jobs have
-    # completed...
-#    while pl.isactive:
-#        print pl.get_progress()
- 
+
+    if verbose:
+        progress = 0
+        # TODO: show progress of each stage
+#        progBars = [ProgressBar(stage.name, 0, len(pics), 30) for stage in pl.stages]        
+        progBar = ProgressBar(minValue=0, maxValue=len(pics), totalWidth=30)
+        while True:
+            tmpProgress = pl.get_progress()
+            if tmpProgress != progress:
+                progress = tmpProgress
+                if progress >= len(pics):
+                    break   # Exit; all pictures were processed
+                else:
+                    progress = tmpProgress
+                    progBar.updateAmount(progress)
+                    sys.stdout.write(str(progBar) + '\r')
+                    sys.stdout.flush()
+            time.sleep(0.1)
+        # Finish progress display: show 100% and return to normal output
+        progBar.updateAmount(len(pics))
+        sys.stdout.write(str(progBar) + '\r')
+        sys.stdout.flush()
+        print
+    # Make sure that all worker threads have terminated
     pl.join()
     return pics
     
