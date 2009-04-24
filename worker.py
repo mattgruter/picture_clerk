@@ -11,7 +11,6 @@ __date__ = "$Date: 2008/11/18 $"
 __copyright__ = "Copyright (c) 2008 Matthias Grueter"
 __license__ = "GPL"
 
-import sys
 import os
 import threading
 import Queue
@@ -33,7 +32,7 @@ import config
 # TODO: implement batch workers: they take several pictures from a queue and
 #       process in the same run due to better efficiency (typically subprocess
 #       workers to circumvent large process starting overhead).
-# TODO: _compile_sidecar_path in Worker and _compile_command in Subprocess class
+# TODO: _compile_sidecar_filename in Worker and _compile_command in Subprocess class
 #       should return dictionaries insteaf of tuples
 # FIXME: all write to writable picture attributes has to be thread safe
 class Worker(threading.Thread):
@@ -41,48 +40,51 @@ class Worker(threading.Thread):
 
     Constructor arguments:
         name (string)           :   unique identifier of worker
-        pool                    :   object to which worker belongs (e.g. Stage)
         inqueue (Queue.Queue)   :   queue from which worker gets his jobs
         outqueue (Queue.Queue)  :   queue into which worker puts finished jobs
+        pool                    :   object to which worker belongs (i.e. Stage)
+        path (string)           :   path in which the worker is to base its work
         logpath (string)        :   logfile path
     """
 
     name = 'Worker'
 
-    def __init__(self, pool, inqueue, outqueue, logpath='./'):
+    def __init__(self, inqueue, outqueue, number, pool, path, logdir):
         threading.Thread.__init__(self)
-        self.pool = pool   
         self.inqueue = inqueue
         self.outqueue = outqueue
-        self.logpath = logpath
+        self.number = number
+        self.pool = pool
+        self.path = path
+        self.logdir = logdir
         
     def _work(self, picture, jobnr):
         pass    # Override me in derived class
         return False
         
-    def _compile_sidecar_path(self, picture):
+    def _compile_sidecar_filename(self, picture):
         """
-        Returns path and content type of generated sidecar file by the worker
+        Returns filename and content type of generated sidecar file by the worker
         
         This function has to be overriden by derived class if sidecar files are
         generated.
             Arguments passed    : picture object
-            Arguments returned  : tuple of strings (path, content_type)
+            Arguments returned  : tuple of strings (filename, content_type)
         """
         
         pass    # Override me in derived class
         return None
         
     def _init_logging(self):
-        self.outfile = self.logpath + '/' + self.name + '.log'
-        self.outfile_handle=open(self.outfile, 'w')
-        self.errfile = self.logpath + '/' + self.name + '.err'
-        self.errfile_handle=open(self.errfile, 'w')
+        _logfile = os.path.join(self.path, self.logdir, self.name + str(self.number) + '.log')
+        self.outlog_handle=open(_logfile, 'w')   # unbuffered
+        _errfile = os.path.join(self.path, self.logdir, self.name + str(self.number) + '.err')
+        self.errlog_handle=open(_errfile, 'w')   # unbuffered
         
     def _end_logging(self):
         # Closing logging file handles    
-        self.outfile_handle.close()
-        self.errfile_handle.close()
+        self.outlog_handle.close()
+        self.errlog_handle.close()
 
     def run(self):
         self._init_logging()
@@ -104,7 +106,7 @@ class Worker(threading.Thread):
                 # TODO: make history more useful: exact job performed, timestamp, etc.
                 # FIXME: this has to be thread safe
                 picture.history.append((self.name, time.ctime()))
-                sidecar = self._compile_sidecar_path(picture)
+                sidecar = self._compile_sidecar_filename(picture)
                 if sidecar:
                     picture.add_sidecar(*sidecar)
                 self.inqueue.task_done()
@@ -122,26 +124,26 @@ class HashDigestWorker(Worker):
         # TODO: catch exceptions of not accessible files
         # TODO: fix logging to file
 #        print self.name, "(", jobnr, "): ..."
-        with open(picture.path, 'rb') as pic:
+        with open(os.path.join(self.path, picture.filename), 'rb') as pic:
             buf = pic.read()
         digest = hashlib.sha1(buf).hexdigest()
         # TODO: no sidecar file needed?
         picture.checksum = digest
         
         # write digest to a sidecar file     
-        (hash_file, content_type) = self._compile_sidecar_path(picture)
-        with open(hash_file, 'w') as f:
-            f.write(digest + '  ' + os.path.basename(picture.path) + '\n')    
+        (hashFilename, contentType) = self._compile_sidecar_filename(picture)
+        with open(os.path.join(self.path, hashFilename), 'w') as f:
+            f.write(digest + '  ' + picture.filename + '\n')    
         # TODO: fix logging to file
 #        print self.name, "(", jobnr, "): Ok."
 
         # FIXME: Return something useful
         return True
         
-    def _compile_sidecar_path(self, picture):
-        _path = os.path.join(picture.dir, picture.basename + '.sha1')
-        _content_type = 'Checksum'
-        return (_path, _content_type)    
+    def _compile_sidecar_filename(self, picture):
+        _filename = picture.basename + '.sha1'
+        _contentType = 'Checksum'
+        return (_filename, _contentType)    
 
 
 # TODO: check return code of subprocess
@@ -156,19 +158,18 @@ class SubprocessWorker(Worker):
 
         This function has to be overriden by derived classes.
             Arguments passed    : picture object
-            Arguments returned  : tuple of strings (cmd, path)
+            Arguments returned  : command line (list of strings)
         """
         
         pass    # Override me in derived class
-        return (None, None)
+        return None
     
     def _work(self, picture, jobnr):
         command = self._compile_command(picture)
         try:
-            self.process = subprocess.Popen(command['cmd'], shell=False,
-                                            cwd=command['path'],
-                                            stdout=self.outfile_handle,
-                                            stderr=self.errfile_handle)
+            self.process = subprocess.Popen(command, shell=False, cwd=self.path,
+                                            stdout=self.outlog_handle,
+                                            stderr=self.errlog_handle)
             # TODO: fix logging to file
 #            print self.name, "(", jobnr, "): ..."
             retcode = self.process.wait()
@@ -197,14 +198,12 @@ class DCRawThumbWorker(SubprocessWorker):
     _args = '-e'
     
     def _compile_command(self, picture):
-        _cmd = [ self._bin, self._args, picture.path ]
-        _path = os.path.dirname(picture.path)
-        return dict(cmd=_cmd, path=_path)
+        return [ self._bin, self._args, picture.filename ]
         
-    def _compile_sidecar_path(self, picture):
-        _path = os.path.join(picture.dir, picture.basename + '.thumb.jpg')
+    def _compile_sidecar_filename(self, picture):
+        _filename = picture.basename + '.thumb.jpg'
         _content_type = 'Thumbnail'
-        return (_path, _content_type)    
+        return (_filename, _content_type)    
 
 
 class Exiv2MetadataWorker(SubprocessWorker):
@@ -217,15 +216,12 @@ class Exiv2MetadataWorker(SubprocessWorker):
     _args = ['-e', 'X', 'ex']
     
     def _compile_command(self, picture):
-        # FIXME: This is ugly
-        _cmd = [ self._bin ] + self._args + [ picture.path ]
-        _path = os.path.dirname(picture.path)
-        return dict(cmd=_cmd, path=_path)
+        return [ self._bin ] + self._args + [ picture.filename ]
         
-    def _compile_sidecar_path(self, picture):
-        _path = os.path.join(picture.dir, picture.basename + '.xmp')
+    def _compile_sidecar_filename(self, picture):
+        _filename = picture.basename + '.xmp'
         _content_type = 'XMP Metadata'
-        return (_path, _content_type)
+        return (_filename, _content_type)
        
        
 class AutorotWorker(SubprocessWorker):
@@ -239,12 +235,8 @@ class AutorotWorker(SubprocessWorker):
     _args = '-autorot'
     
     def _compile_command(self, picture):
-        # FIXME: This is ugly
-        _cmd = [ self._bin, self._args, picture.thumbnail ]
-        _path = os.path.dirname(picture.thumbnail)
-        return dict(cmd=_cmd, path=_path)
+        return [ self._bin, self._args, picture.thumbnail ]
 
- 
         
 class GitAddWorker(SubprocessWorker):
     """
@@ -259,11 +251,8 @@ class GitAddWorker(SubprocessWorker):
     _args = 'add'
     
     def _compile_command(self, picture):
-        _cmd = [ self._bin, self._args, picture.path ]
-        _path = os.path.dirname(picture.path)
-        return dict(cmd=_cmd, path=_path)
+        return [ self._bin, self._args, picture.filename ]
     
-
                     
 # Unit test       
 def _test():

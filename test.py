@@ -14,7 +14,7 @@ from picture import *
 path = '../test_album'
 dirlist = os.listdir(path)
 files = fnmatch.filter(dirlist, "*.NEF")
-files = [ os.path.join(path, f) for f in files ]
+#files = [ os.path.join(path, f) for f in files ]
 pics = [ Picture(f) for f in files ]
 
 #inbuf = Queue.Queue()

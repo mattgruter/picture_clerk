@@ -33,4 +33,4 @@ CACHE_FILE = '.pic.db'
 IMPORT_FILE_PATTERN = '*.NEF'
 
 # logging dir
-LOGDIR='./log'
+LOGDIR='log/'

@@ -27,8 +27,8 @@ class Stage():
     A stage is a segment in a pipeline defining the type of workers it employs.
     """
 
-    def __init__(self, name, WorkerClass, num_workers, pipeline, in_buffer,
-                 out_buffer, seq_number):
+    def __init__(self, name, WorkerClass, num_workers, in_buffer,
+                 out_buffer, seq_number, pipeline, path, logdir):
         self.name = name
         self.WorkerClass = WorkerClass
         self.num_workers = num_workers
@@ -36,12 +36,11 @@ class Stage():
         self.input = in_buffer
         self.output = out_buffer
         self.seq_number = seq_number
-#        self.workers = self._create_worker(self.num_workers)
+        self.worker_environ = dict(pool=self, path=path, logdir=logdir)
         self.isactive = False
 
     def _create_worker(self, num):
-        # TODO: log to a pipeline or picture specific directory instead of "./"
-        return [ self.WorkerClass(self, self.input, self.output, config.LOGDIR) for i in range(num) ]
+        return [ self.WorkerClass(self.input, self.output, i, **self.worker_environ) for i in range(num) ]
 
     def add_worker(self):
         new_worker = self._create_worker(1)
@@ -59,13 +58,15 @@ class Stage():
         # start threads
         [worker.start() for worker in self.workers]
 
+
     def stop(self):
         """
         Block until all workers have finished current job. Input queue does not
-        have to be empty. 
+        have to be empty.
         """
         self.isactive = False
         [worker.join() for worker in self.workers]
+        
         
     def join(self):
         """

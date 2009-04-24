@@ -36,7 +36,7 @@ class Pipeline():
     Pipeline defines the stages of the workflow.
     """
     
-    def __init__(self, name, recipe):
+    def __init__(self, name, recipe, path, logdir):
         self.name = name
         # recipe defining the sequence of jobs to be performed
         self.recipe = recipe
@@ -48,14 +48,16 @@ class Pipeline():
         self.input = self.buffers[0]
         # The output buffer of the pipeline
         self.output = self.buffers[-1]
+        # Stage environment variables
+        self.stage_environ = dict(pipeline=self, path=path, logdir=logdir)
         # Create stages and connect them to the buffers
         self.stages = [Stage(name=self.recipe.stage_names[i],
                              WorkerClass=self.recipe.stage_types[i],
                              num_workers=self.num_stageworkers,
-                             pipeline=self,
                              in_buffer=self.buffers[i],
                              out_buffer=self.buffers[i+1],
-                             seq_number=i) for i in range(self.num_stages)]
+                             seq_number=i,
+                             **self.stage_environ) for i in range(self.num_stages)]
         # jobnr is a simple counter of jobs that have been or still are processed
         self.jobnr = 0
         # Set state to inactive
@@ -105,7 +107,7 @@ class Pipeline():
         """
         [s.join() for s in self.stages]
         self.isactive = False
-        
+    
     
 
 # Unit test       
