@@ -41,6 +41,8 @@ class Dispatcher(threading.Thread):
         
     def _stop_workers(self):
         # let workers finish the jobs they are working on and wait for them
+        # TODO: this method should probably be called _finish_workers or some-
+        #       thing to make it clear that workers are not directly terminated
         if self.workersOnHold: self._activate_workers()
         for worker in self.pool.workers:
             worker.join()

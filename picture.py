@@ -52,7 +52,7 @@ class Picture(object):
         # sidecar files
         self._sidecars = set([])
         # metadata
-        #self.metadata = 
+        self.metadata = dict()
         # history
         self.history = []
                     

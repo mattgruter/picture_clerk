@@ -17,6 +17,7 @@ import Queue
 import subprocess
 import time
 import hashlib
+import pyexiv2
 
 import config
 
@@ -131,6 +132,46 @@ class Worker(threading.Thread):
             # ensure that _end_logging method is always called
             if self.logging: self._end_logging()
             
+            
+class MetadataWorker(Worker):
+    """MetadataWorker extracts metadata from an image and stores values of
+    interest in a dictionary of the picture instance."""
+    
+    name = 'HashDigestWorker'
+    
+    def _parse_exif(self, value):
+        # TODO: use eval to get to a number value
+        return str(value)
+            
+    def _work(self, picture, jobnr):
+        # TODO: catch exceptions of not accessible files
+        # TODO: fix logging to file
+#        print self.name, "(", jobnr, "): ..."
+        _pic_fn = os.path.join(self.path, picture.filename)
+        _keys = ['Exif.Photo.ExposureTime', 'Exif.Photo.FNumber',
+                 'Exif.Photo.ExposureProgram', 'Exif.Photo.ISOSpeedRatings',
+                 'Exif.Photo.DateTimeOriginal', 'Exif.Photo.DateTimeDigitized',
+                 'Exif.Photo.ExposureBiasValue', 'Exif.Photo.MaxApertureValue',
+                 'Exif.Photo.MeteringMode', 'Exif.Photo.LightSource',
+                 'Exif.Photo.Flash', 'Exif.Photo.FocalLength',]
+        try:
+            image = pyexiv2.Image(_pic_fn)
+        except IOError:
+            # How should this be handled?
+            print 'File not found: %s' % _pic_fn
+        # TODO: better way to copy part of a dictionary?
+        for k in _keys:
+            try:
+                self.metadata[k] = self._parse_exif(image[k])
+            except IndexError:
+                self.metadata[k] = None
+                
+        # TODO: fix logging to file
+#        print self.name, "(", jobnr, "): Ok."
+
+        # FIXME: Return something useful
+        return True
+            
 
 class HashDigestWorker(Worker):
     """HashDigestWorker class derived from Worker calculates hash digests of picture files."""
@@ -144,9 +185,8 @@ class HashDigestWorker(Worker):
         with open(os.path.join(self.path, picture.filename), 'rb') as pic:
             buf = pic.read()
         digest = hashlib.sha1(buf).hexdigest()
-        # TODO: no sidecar file needed?
         picture.checksum = digest
-        
+        # TODO: maybe no sidecar file needed?
         # write digest to a sidecar file     
         (hashFilename, contentType) = self._compile_sidecar_filename(picture)
         with open(os.path.join(self.path, hashFilename), 'w') as f:
