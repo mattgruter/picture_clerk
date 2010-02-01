@@ -32,10 +32,11 @@ pics = [ Picture(f) for f in files ]
     
 #s = Stage('stage', DCRawThumbWorker, 3, 'pipeline', inbuf, outbuf, 1)
 
-instructions = [Exiv2MetadataWorker, DCRawThumbWorker, HashDigestWorker, AutorotWorker]
+instructions = [HashDigestWorker, MetadataWorker, Exiv2XMPSidecarWorker,
+                DCRawThumbWorker, AutorotWorker]
 recipe = Recipe(instructions)
 
-pl = Pipeline('TestPipe', recipe)
+pl = Pipeline('TestPipe', recipe, path)
 
 for pic in pics:
     pl.put(pic)

@@ -37,7 +37,8 @@ import config
 #       should return dictionaries insteaf of tuples
 # FIXME: all write to writable picture attributes has to be thread safe
 class Worker(threading.Thread):
-    """Worker is a thread class who works on jobs coming from a queue.
+    """
+    Worker is a thread class who works on jobs coming from a queue.
 
     Constructor arguments:
         name (string)           :   unique identifier of worker
@@ -134,37 +135,67 @@ class Worker(threading.Thread):
             
             
 class MetadataWorker(Worker):
-    """MetadataWorker extracts metadata from an image and stores values of
-    interest in a dictionary of the picture instance."""
+    """
+    MetadataWorker extracts metadata from an image and stores values of
+    interest in a dictionary of the picture instance.
+    """
     
-    name = 'HashDigestWorker'
+    # FIXME: pyexiv2 doesn't seem to be thread safe...
     
-    def _parse_exif(self, value):
-        # TODO: use eval to get to a number value
-        return str(value)
+    name = 'MetadataWorker'
+    
+    def _parse_exif(self, tag, value):
+        # TODO: use eval to get to a human-readable value
+#        return str(value)
+
+        if isinstance(value, pyexiv2.Rational):
+            # TODO: convert rational numbers to more sane values (rat, int?)
+            return value
+        else:
+            if tag == 'Exif.Photo.ExposureProgram':
+                # TODO: how to decode to a meaningful string?
+                return value
+            elif tag == 'Exif.Photo.MeteringMode':
+                # TODO: how to decode to a meaningful string?
+                return value
+            elif tag == 'Exif.Photo.Flash':
+                # TODO: how to decode to a meaningful string?
+                return value
+            elif tag == 'Exif.Photo.LightSource':
+                # TODO: how to decode to a meaningful string?
+                return value
+            else:
+                return value
             
     def _work(self, picture, jobnr):
         # TODO: catch exceptions of not accessible files
         # TODO: fix logging to file
 #        print self.name, "(", jobnr, "): ..."
-        _pic_fn = os.path.join(self.path, picture.filename)
+        _picFname = os.path.join(self.path, picture.filename)
         _keys = ['Exif.Photo.ExposureTime', 'Exif.Photo.FNumber',
                  'Exif.Photo.ExposureProgram', 'Exif.Photo.ISOSpeedRatings',
                  'Exif.Photo.DateTimeOriginal', 'Exif.Photo.DateTimeDigitized',
                  'Exif.Photo.ExposureBiasValue', 'Exif.Photo.MaxApertureValue',
-                 'Exif.Photo.MeteringMode', 'Exif.Photo.LightSource',
-                 'Exif.Photo.Flash', 'Exif.Photo.FocalLength',]
+                 'Exif.Photo.MeteringMode', 'Exif.Photo.WhiteBalance',
+                 'Exif.Photo.Flash', 'Exif.Photo.LightSource',
+                 'Exif.Photo.FocalLength', 'Exif.Photo.FocalLengthIn35mmFilm',
+                 'Exif.Image.Make', 'Exif.Image.Model',
+                 'Exif.Photo.UserComment']
         try:
-            image = pyexiv2.Image(_pic_fn)
+            exif = pyexiv2.Image(_picFname)
+            exif.readMetadata()
+            exif.cacheAllExifTags()
         except IOError:
             # How should this be handled?
-            print 'File not found: %s' % _pic_fn
+            print 'File not found: %s' % _picFname
         # TODO: better way to copy part of a dictionary?
         for k in _keys:
             try:
-                self.metadata[k] = self._parse_exif(image[k])
+                picture.metadata[k] = self._parse_exif(k, exif[k])
             except IndexError:
-                self.metadata[k] = None
+                picture.metadata[k] = None
+            except IOError:
+                picture.metadata[k] = None
                 
         # TODO: fix logging to file
 #        print self.name, "(", jobnr, "): Ok."
@@ -174,7 +205,10 @@ class MetadataWorker(Worker):
             
 
 class HashDigestWorker(Worker):
-    """HashDigestWorker class derived from Worker calculates hash digests of picture files."""
+    """
+    HashDigestWorker class derived from Worker calculates hash digests of
+    picture files.
+    """
     
     name = 'HashDigestWorker'
     
@@ -205,7 +239,9 @@ class HashDigestWorker(Worker):
 
 # TODO: check return code of subprocess
 class SubprocessWorker(Worker):
-    """SubprocessWorker class derived from Worker executes external programs."""
+    """
+    SubprocessWorker class derived from Worker executes external programs.
+    """
     
     name = 'SubprocessWorker'
     
@@ -248,7 +284,8 @@ class SubprocessWorker(Worker):
         
 class DCRawThumbWorker(SubprocessWorker):
     """
-    DCRawThumbWorker is a subprocess worker that uses DCRaw to extract thumbnails.
+    DCRawThumbWorker is a subprocess worker that uses DCRaw to extract
+    a thumbnail to a sidecar file.
     """
     
     #TODO: autorot thumbnail pictures
@@ -266,12 +303,13 @@ class DCRawThumbWorker(SubprocessWorker):
         return (_filename, _content_type)    
 
 
-class Exiv2MetadataWorker(SubprocessWorker):
+class Exiv2XMPSidecarWorker(SubprocessWorker):
     """
-    Exiv2MetadataWorker is a subprocess worker that uses Exiv2 to extract metadata.
+    Exiv2XMPSidecarWorker is a subprocess worker that uses Exiv2 to extract
+    metadata to a sidecar XMP file.
     """
     
-    name = 'Exiv2MetadataWorker'
+    name = 'Exiv2XMPSidecarWorker'
     _bin = config.EXIV2_BIN
     _args = ['-e', 'X', 'ex']
     

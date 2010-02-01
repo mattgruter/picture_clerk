@@ -55,12 +55,31 @@ class Picture(object):
         self.metadata = dict()
         # history
         self.history = []
+        
+    def _str_sidecars(self):
+        rtn = str()
+        for s in self._sidecars:
+            rtn += ('\n   %s: %s' % (s.content_type, s.filename))
+        return rtn
+        
+    def _str_metadata(self):
+        rtn = str()
+        for k,v in sorted(self.metadata.iteritems()):
+            rtn += ('\n   %s: %s' % (k, v))
+        return rtn 
                     
     def __str__(self):
         rtn = self.filename
-        for s in self._sidecars:
-            rtn += ('\n  %s: %s' % (s.content_type, s.filename))
+        if self.metadata:
+            rtn += ('\n  Metadata:')
+            rtn += self._str_metadata()
+        if self._sidecars:
+            rtn += ('\n  Sidecar files:')
+            rtn += self._str_sidecars()
         return rtn
+        
+    def __repr__(self):
+        return str(self)
         
     def __cmp__(self, other):
         return cmp(self.filename, other.filename)

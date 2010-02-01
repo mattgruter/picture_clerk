@@ -100,7 +100,8 @@ def import_dir(path, verbose):
     # create Picture instances and place them in a set to avoid duplicates
     pics = set([ Picture(f) for f in files ])
     # pipeline instructions: retrieve metadata & thumbnail, calculate checksum, rotate thumbnails
-    instructions = [Exiv2MetadataWorker, DCRawThumbWorker, HashDigestWorker, AutorotWorker]
+    instructions = [HashDigestWorker, MetadataWorker, Exiv2XMPSidecarWorker,
+                    DCRawThumbWorker, AutorotWorker]
     recipe = Recipe(instructions)
 
     if config.LOGGING:

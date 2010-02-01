@@ -12,7 +12,7 @@ __license__ = "GPL"
 
 
 # number of workers in each stage by default
-DEFAULT_NUM_STAGEWORKERS = 5
+DEFAULT_NUM_STAGEWORKERS = 1
 
 # number of seconds a worker should wait for new jobs if queue is empty
 WORKER_TIMEOUT = 1

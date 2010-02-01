@@ -26,5 +26,14 @@ class Recipe():
         """Create stage specifications from given instructions."""
         # TODO: How should instructions look like?
         return (instructions, instructions)
+        
+    def __str__(self):
+        string = []
+        for i, stage in enumerate(self.stage_names):
+            string.append('%i: %s' % (i+1, stage))
+        return '\n'.join(string)
+        
+    def __repr__(self):
+        return str(self)
 
     
