@@ -90,6 +90,8 @@ def import_dir(path, verbose):
     #       already present sidecar files are not overwritten. or maybe,
     #       analyze directory and add present sidecar files (=same basename) to
     #       picture instance.
+    # TODO: check if cache file .pic.db is already present to avoid writing
+    #       it over. even better: add new pictures to already present cache.
     files = fnmatch.filter(dirlist, config.IMPORT_FILE_PATTERN)
     if not files:
         if verbose:
@@ -259,7 +261,7 @@ def show_dir(pics, path, verbose):
     
     
 def list_checksums(pics, verbose):
-    output = ('%s  %s' % (p.basename+p.extension, p.checksum) for p in sorted(pics))
+    output = ('%s *%s' % (p.checksum, p.basename+p.extension) for p in sorted(pics))
     for line in output:
         print line
     
@@ -321,6 +323,8 @@ def main():
     _cacheFile = os.path.join(opt.path, config.CACHE_FILE)
     try:
         # load cache file
+        # TODO: use different cache format that is fully protable and possibly
+        #       text based and human readable (i.e. json?)
         cache = shelve.open(_cacheFile, writeback=False)
         if opt.verbose:
             print "Using file %s as cache" % _cacheFile
