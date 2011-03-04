@@ -224,7 +224,7 @@ class HashDigestWorker(Worker):
         # write digest to a sidecar file     
         (hashFilename, contentType) = self._compile_sidecar_filename(picture)
         with open(os.path.join(self.path, hashFilename), 'w') as f:
-            f.write(digest + '  ' + picture.filename + '\n')    
+            f.write(digest + ' *' + picture.filename + '\n')    
         # TODO: fix logging to file
 #        print self.name, "(", jobnr, "): Ok."
 
