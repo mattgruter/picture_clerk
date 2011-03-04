@@ -68,21 +68,6 @@ class ProgressBar:
 		return str(self.progBar)
 
 
-def read_cache(cache, verbose):
-    # TODO: catch exceptions
-    try:
-        pics = cache['pics']
-    except KeyError:
-        print "Cache file unreadable."
-        sys.exit(2)
-    return pics
-        
-        
-def write_cache(cache, pics, verbose):
-    # TODO: catch exceptions
-    cache['pics'] = pics
-
-
 def import_dir(path, verbose):
     import time
     # TODO: use os.walk to search for files recursively
@@ -157,15 +142,16 @@ def list_pics(pics, verbose):
         print pic
         
         
-def path2pic(files, pics, verbose):
-    res = []
+def path2pic(path, pics):
+    """
+    Return picture object that has the given path in its file list.
+    
+    path2pic searches among the original picture filename, all sidecar filenames
+    and the picture basename.
+    """
     for pic in pics:
-        # look in all associated files and the picture basename for a match
-        for fname in pic.get_filenames() + [pic.basename]:
-            if fname in files:
-                res.append(pic)
-    return res
-#    return [pic for pic in pics if pic. in files]
+        if path in pic.get_filenames() + [pic.basename]:
+            return pic
     
         
 def clean_pics(pics, path, verbose):
@@ -247,7 +233,7 @@ def show_dir(pics, path, verbose):
         print 'QIV exited.'
     # TODO: QivController should return a list of Picture references instead of
     #       a list of thumbnail files in trash (path2pic within QivController?)
-    trashContent = path2pic(qivCtrl.getTrashContent(), pics, verbose)
+    trashContent = [path2pic(path, pics) for path in qivCtrl.getTrashContent()]
     trashPath = qivCtrl.getTrashPath()
     if trashContent:
         print 'Deleted pictures:'
@@ -286,124 +272,159 @@ def check_dir(pics, path, verbose):
       
 
 def update_dir(pics, path, verbose):
-    pass
+    raise NotImplementedError
 
 
-def clone_dir(pics, src_path, dest_path, thumbsonly, linkonly):
-    if linkonly:
+def clone_dir(pics, src_path, dest_path, thumbs, link=False):
+    if link:
         # create unix symlinks if linksonly is true
         copy = os.symlink
     else:
         # use shutil copy (aka 'cp -p' to copy files)
         copy = shutil.copy2
-        
-    if thumbsonly:
-        for pic in pics:
-            # FIXME: which thumbnail to copy. Now only last thumbnail is copied
-            thumb = pic.get_thumbnails()[-1].filename
-            src = os.path.abspath(os.path.join(src_path, thumb))
-            dest = os.path.join(dest_path, thumb)
+    
+    for pic in pics:
+        # FIXME: which thumbnail to copy? Now only last thumbnail is copied
+        if thumbs:
+            fnames = [pic.get_thumbnails()[-1].filename]
+        else:
+            fnames = pic.get_filenames()
+        for fname in fnames:
+            src = os.path.join(src_path, fname)
+            dest = os.path.join(dest_path, fname)
             copy(src, dest)
-    else:
-        raise NotImplementedError
+
+
+def open_cache(path):
+    # TODO: use different cache format that is fully protable and possibly
+    #       text based and human readable (i.e. json, xml?)
+    cache_file = os.path.join(path, config.CACHE_FILE)
+#    logging.debug("Using cache file %s" % cache_file)
+    try:
+        return shelve.open(cache_file, writeback=True)
+    except (error, DBAccessError):
+        print "Error accessing %s" % cache_file
+        sys.exit(2)
+        
+        
+def read_pics(cache):
+    try:
+        pics = cache['pics']
+    except KeyError:
+        print "No pictures found in cache."
+        sys.exit(2)
+#        logging.error("No pictures found in cache.")
+    return pics
 
 
 def main():
-    from optparse import OptionParser
+    from optparse import OptionParser, OptionGroup
 
-    usage = "usage: %prog [OPTIONS] COMMAND ARGS\n" + \
-            "  example: %prog clone DEST -d SRC\n" + \
-            "  example: %prog import"
+    usage = "Usage: %prog [OPTIONS] import\n" \
+          + "   or: %prog [OPTIONS] update\n" \
+          + "   or: %prog [OPTIONS] clone SRC\n" \
+          + "   or: %prog [OPTIONS] list...\n" \
+          + "   or: %prog [OPTIONS] show\n" \
+          + "   or: %prog [OPTIONS] check\n" \
+          + "   or: %prog [OPTIONS] delete FILES"
+                    
     parser = OptionParser(usage)
+    
+    # Global options
     parser.add_option("-d", "--directory", dest="path",
-                      help="picture directory (default: ./)")
-    parser.add_option("-t", "--thumbsonly",
-                      action="store_true", dest="thumbsonly",
-                      help="clone only thumbnail files")
-    parser.add_option("-l", "--linkonly",
-                      action="store_true", dest="linkonly",
-                      help="link instead of copying during cloning")
+                           help="picture directory (default: %default)")
     # TODO: use logging package
     parser.add_option("-v", "--verbose",
-                      action="store_true", dest="verbose",
-                      help="make lots of noise [default]")
+                           action="store_true", dest="verbose",
+                           help="make lots of noise [default]")
     parser.add_option("-q", "--quiet",
-                      action="store_false", dest="verbose",
-                      help="be vewwy quiet (I'm hunting wabbits)")
-    parser.set_defaults(verbose=True, path='./')
+                           action="store_false", dest="verbose",
+                           help="be vewwy quiet (I'm hunting wabbits)")
+                           
+    # Options for the 'clone' command
+    clone_opts = OptionGroup(parser, "Clone options",
+                             "Options for the clone command.")
+    clone_opts.add_option("-t", "--thumbs",
+                          action="store_true", dest="thumbs",
+                          help="clone only thumbnail files")
+    clone_opts.add_option("-l", "--link",
+                          action="store_true", dest="link",
+                          help="link instead of copying during cloning")
+    parser.add_option_group(clone_opts)
+
+    parser.set_defaults(verbose=True, path='.')
     (opt, args) = parser.parse_args()
     
     # input validation and interpretation
     if not args:
         parser.error("no command given")
-    else:
-        if not os.path.isdir(opt.path):
-            parser.error("invalid directory: %s" % opt.path)
-        # first argument is the command
-        cmd = args.pop(0)
-        # FIXME: arguments don't necessarily need to be valid files/paths
-#        for arg in args:
-#            if not os.path.isfile(arg):
-#                parser.error("invalid file: %s" % arg)
-#            elif not os.path.samefile(os.path.dirname(arg), opt.path):
-#                parser.error("file $s outside directory $s" % (arg, opt.path))
-#        else:
-#            files = set(os.path.basename(arg) for arg in args)
-        files = set(os.path.basename(arg) for arg in args)
 
-    _cacheFile = os.path.join(opt.path, config.CACHE_FILE)
-    try:
-        # load cache file
-        # TODO: use different cache format that is fully protable and possibly
-        #       text based and human readable (i.e. json?)
-        cache = shelve.open(_cacheFile, writeback=False)
-        if opt.verbose:
-            print "Using file %s as cache" % _cacheFile
-        if cmd == "import":
-            pics = import_dir(opt.path, opt.verbose)
-            write_cache(cache, pics, opt.verbose)
-        elif cmd == "list":
-            pics = read_cache(cache, opt.verbose)
-            list_pics(pics, opt.verbose)
-        elif cmd == "clean":
-            pics = read_cache(cache, opt.verbose)
-            clean_dir(pics, opt.path, opt.verbose)
-        elif cmd == "show":
-            pics = read_cache(cache, opt.verbose)
-            pics = show_dir(pics, opt.path, opt.verbose)
-            write_cache(cache, pics, opt.verbose)
-        elif cmd == "checksums":
-            # TODO: add this to 'list' command with a checksum flag
-            pics = read_cache(cache, opt.verbose)
-            list_checksums(pics, opt.verbose)
-        elif cmd == "check":
-            pics = read_cache(cache, opt.verbose)
-            check_dir(pics, opt.path, opt.verbose)
-        elif cmd == "delete":
-            pics = read_cache(cache, opt.verbose)
-            pics = delete_pics(path2pic(files, pics, opt.verbose), pics, opt.path, opt.verbose)
-            write_cache(cache, pics, opt.verbose)
-        elif cmd == "update":
-            # FIXME: import is a special case of update
-            pics = read_cache(cache, opt.verbose)
-            raise NotImplementedError
-            update_dir(pics, opt.path, opt.verbose)
-            write_cache(cache, pics, opt.verbose)
-        elif cmd == "clone":
-            # FIXME: create destination directory if it does not exist (as git does it)
-            pics = read_cache(cache, opt.verbose)
-            dest_path = args.pop(0)
-            if not os.path.isdir(dest_path):
-                parser.error("invalid directory: %s" % src_path)
-            clone_dir(pics, opt.path, dest_path, opt.thumbsonly, opt.linkonly)
-            # TODO: create pic.db in cloned directory (with reference to source)
-        else:
-            parser.error("invalid argument: %s" % cmd)
-    except:
-        print "Can't load cache file."
-        raise
-#    finally:
-#        cache.close()
+    if not os.path.isdir(opt.path):
+        parser.error("invalid directory: %s" % opt.path)
+    # first argument is the command
+    cmd = args.pop(0)
+
+    if cmd == "import":
+        pics = import_dir(opt.path, opt.verbose)
+        cache = open_cache(opt.path)
+        cache['pics'] = pics
+        cache.close()
+    elif cmd == "list":
+        cache = open_cache(opt.path)
+        pics = read_pics(cache)
+        cache.close()
+        list_pics(pics, opt.verbose)
+    elif cmd == "clean":
+        cache = open_cache(opt.path)
+        pics = read_pics(cache)
+        cache.close()
+        clean_dir(pics, opt.path, opt.verbose)
+    elif cmd == "show":
+        cache = open_cache(opt.path)
+        pics = read_pics(cache)
+        pics = show_dir(pics, opt.path, opt.verbose)
+        cache['pics'] = pics
+        cache.close()
+    elif cmd == "checksums":
+        # TODO: add this to 'list' command with a checksum flag
+        cache = open_cache(opt.path)
+        pics = read_pics(cache)
+        cache.close()
+        list_checksums(pics, opt.verbose)
+    elif cmd == "check":
+        cache = open_cache(opt.path)
+        pics = read_pics(cache)
+        cache.close()
+        check_dir(pics, opt.path, opt.verbose)
+    elif cmd == "delete":
+        cache = open_cache(opt.path)
+        pics = read_pics(cache)
+        files = args
+        pics_to_remove = [path2pic(path, pics) for path in files]
+        pics = delete_pics(pics_to_remove, pics, opt.path, opt.verbose)            
+        cache['pics'] = pics
+        cache.close()
+    elif cmd == "update":
+        # FIXME: import is a special case of update
+        cache = open_cache(opt.path)
+        pics = read_pics(cache)
+        update_dir(pics, opt.path, opt.verbose)
+        cache['pics'] = pics
+        cache.close()
+    elif cmd == "clone":
+        src_path = args.pop(0)
+        if not os.path.isdir(src_path):
+            parser.error("invalid directory: %s" % src_path)
+        cache = open_cache(src_path)
+        pics = read_pics(cache)
+        cache.close()
+        clone_dir(pics, src_path, opt.path, opt.thumbs, opt.link)
+        cache = open_cache(opt.path)
+        cache['pics'] = pics
+        cache.close()
+    else:
+        parser.error("invalid argument: %s" % cmd)
+
     
 
 if __name__ == "__main__":
