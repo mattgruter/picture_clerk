@@ -16,6 +16,7 @@ import os
 import sys
 import fnmatch
 import shelve
+import shutil
 
 from recipe import *
 from worker import *
@@ -100,7 +101,7 @@ def import_dir(path, verbose):
     # create Picture instances and place them in a set to avoid duplicates
     pics = set([ Picture(f) for f in files ])
     # pipeline instructions: retrieve metadata & thumbnail, calculate checksum, rotate thumbnails
-    instructions = [HashDigestWorker, MetadataWorker, Exiv2XMPSidecarWorker,
+    instructions = [HashDigestWorker, Exiv2XMPSidecarWorker,
                     DCRawThumbWorker, AutorotWorker]
     recipe = Recipe(instructions)
 
@@ -288,13 +289,41 @@ def update_dir(pics, path, verbose):
     pass
 
 
+def clone_dir(pics, src_path, dest_path, thumbsonly, linkonly):
+    if linkonly:
+        # create unix symlinks if linksonly is true
+        copy = os.symlink
+    else:
+        # use shutil copy (aka 'cp -p' to copy files)
+        copy = shutil.copy2
+        
+    if thumbsonly:
+        for pic in pics:
+            # FIXME: which thumbnail to copy. Now only last thumbnail is copied
+            thumb = pic.get_thumbnails()[-1].filename
+            src = os.path.abspath(os.path.join(src_path, thumb))
+            dest = os.path.join(dest_path, thumb)
+            copy(src, dest)
+    else:
+        raise NotImplementedError
+
+
 def main():
     from optparse import OptionParser
 
-    usage = "usage: %prog [OPTIONS] ARG1 ARG2"
+    usage = "usage: %prog [OPTIONS] COMMAND ARGS\n" + \
+            "  example: %prog clone DEST -d SRC\n" + \
+            "  example: %prog import"
     parser = OptionParser(usage)
     parser.add_option("-d", "--directory", dest="path",
                       help="picture directory (default: ./)")
+    parser.add_option("-t", "--thumbsonly",
+                      action="store_true", dest="thumbsonly",
+                      help="clone only thumbnail files")
+    parser.add_option("-l", "--linkonly",
+                      action="store_true", dest="linkonly",
+                      help="link instead of copying during cloning")
+    # TODO: use logging package
     parser.add_option("-v", "--verbose",
                       action="store_true", dest="verbose",
                       help="make lots of noise [default]")
@@ -308,7 +337,8 @@ def main():
     if not args:
         parser.error("no command given")
     else:
-        if not os.path.isdir(opt.path): parser.error("invalid directory: %s" % opt.path)
+        if not os.path.isdir(opt.path):
+            parser.error("invalid directory: %s" % opt.path)
         # first argument is the command
         cmd = args.pop(0)
         # FIXME: arguments don't necessarily need to be valid files/paths
@@ -354,14 +384,26 @@ def main():
             pics = delete_pics(path2pic(files, pics, opt.verbose), pics, opt.path, opt.verbose)
             write_cache(cache, pics, opt.verbose)
         elif cmd == "update":
+            # FIXME: import is a special case of update
             pics = read_cache(cache, opt.verbose)
             raise NotImplementedError
             update_dir(pics, opt.path, opt.verbose)
             write_cache(cache, pics, opt.verbose)
+        elif cmd == "clone":
+            # FIXME: create destination directory if it does not exist (as git does it)
+            pics = read_cache(cache, opt.verbose)
+            dest_path = args.pop(0)
+            if not os.path.isdir(dest_path):
+                parser.error("invalid directory: %s" % src_path)
+            clone_dir(pics, opt.path, dest_path, opt.thumbsonly, opt.linkonly)
+            # TODO: create pic.db in cloned directory (with reference to source)
         else:
-            parser.error("invalid argument: %s" % cmd)        
-    finally:
-        cache.close()
+            parser.error("invalid argument: %s" % cmd)
+    except:
+        print "Can't load cache file."
+        raise
+#    finally:
+#        cache.close()
     
 
 if __name__ == "__main__":

@@ -100,8 +100,13 @@ class Picture(object):
         self._sidecars.discard(sidecar)
         sidecar.picture = None
 
+    # FIXME: rename to get_sidecars
     def list_sidecars(self):
         return self._sidecars
+        
+    def get_thumbnails(self):
+        return [sidecar for sidecar in self.list_sidecars()
+                    if sidecar.content_type.lower() == "thumbnail"]
 
 
 class Sidecar(object):
