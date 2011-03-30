@@ -15,8 +15,12 @@ __license__ = "GPL"
 import os
 import sys
 import fnmatch
-import shelve
 import shutil
+import paramiko
+try:
+   import cPickle as pickle
+except:
+   import pickle
 
 from recipe import *
 from worker import *
@@ -24,6 +28,7 @@ from pipeline import *
 from picture import *
 from config import *
 from qivcontrol import *
+from path import *
 
 
 class ProgressBar:
@@ -68,21 +73,39 @@ class ProgressBar:
 		return str(self.progBar)
 
 
+def init_repo(path):
+    """
+    Initializes a directory as a PictureClerk repsoitory.
+    """
+    
+    # TODO: handle remote paths
+    
+    pic_dir = os.path.join(path, config.PIC_DIR)
+    try:
+        os.mkdir(pic_dir)
+    except OSError as err:
+        print "Unable to initialize directory %s (%s)" % (path, err)
+        sys.exit(1)
+
+
 def import_dir(path, verbose):
     import time
+    
+    init_repo(path)
+    
     # TODO: use os.walk to search for files recursively
     dirlist = os.listdir(path)
+
     # TODO: what files to import? check that only NEF files are present so that
     #       already present sidecar files are not overwritten. or maybe,
     #       analyze directory and add present sidecar files (=same basename) to
     #       picture instance.
-    # TODO: check if cache file .pic.db is already present to avoid writing
-    #       it over. even better: add new pictures to already present cache.
     files = fnmatch.filter(dirlist, config.IMPORT_FILE_PATTERN)
     if not files:
         if verbose:
             print 'No picture files found. Exiting.'
         return
+        
     # create Picture instances and place them in a set to avoid duplicates
     pics = set([ Picture(f) for f in files ])
     # pipeline instructions: retrieve metadata & thumbnail, calculate checksum, rotate thumbnails
@@ -174,27 +197,15 @@ def clean_pics(pics, path, verbose):
 def clean_dir(pics, path, verbose):
     # cleaning pictures
     clean_pics(pics, path, verbose)
-    
-    # removing log files
-    _logDir = os.path.join(path, config.LOGDIR)
-    if verbose:
-        print 'Removing log files in %s.' % _logDir
-    try:
-        delete_tree(_logDir)
-    except OSError:
-        print 'Error: Unable to remove log files in %s' % _logDir
-        sys.exit(1)
         
-    # removing cache file
-    _cacheFile = os.path.join(path, config.CACHE_FILE)
-    if verbose:
-        print 'Removing local cache file %s.' % _cacheFile
+    # removing PictureClerk directory and its contents
+    pic_dir = os.path.join(path, config.PIC_DIR)
     try:
-        os.remove(_cacheFile)
-    except OSError:
-        print 'Error: Unable to remove cache file %s.' % _cacheFile
+        delete_tree(pic_dir)
+    except OSError as err:
+        print "Unable to remove %s (Error: %s)" % (pic_dir, err)
         sys.exit(1)
-    
+
     
 def delete_pics(selection, pics, path, verbose):
     clean_pics(selection, path, verbose)
@@ -233,7 +244,7 @@ def show_dir(pics, path, verbose):
         print 'QIV exited.'
     # TODO: QivController should return a list of Picture references instead of
     #       a list of thumbnail files in trash (path2pic within QivController?)
-    trashContent = [path2pic(path, pics) for path in qivCtrl.getTrashContent()]
+    trashContent = [path2pic(pic_path, pics) for pic_path in qivCtrl.getTrashContent()]
     trashPath = qivCtrl.getTrashPath()
     if trashContent:
         print 'Deleted pictures:'
@@ -276,12 +287,31 @@ def update_dir(pics, path, verbose):
 
 
 def clone_dir(pics, src_path, dest_path, thumbs, link=False):
-    if link:
-        # create unix symlinks if linksonly is true
-        copy = os.symlink
-    else:
-        # use shutil copy (aka 'cp -p' to copy files)
-        copy = shutil.copy2
+
+    # TODO: handle remote dest_paths (how to init repo remotly?)
+    # TODO: save path of origin (src_path)
+    # TODO: draw progress bar
+
+    if dest_path.isremote:
+        print "Cloning to remote paths not supported yet."
+        raise NotImplementedError
+        
+    init_repo(dest_path.path)
+
+    if src_path.islocal:
+        if link:
+            # create unix symlinks if linksonly is true
+            copy = os.symlink
+        else:
+            # use shutil copy (aka 'cp -p' to copy files)
+            copy = shutil.copy2
+    elif src_path.protocol == "ssh":
+            src_ssh = paramiko.SSHClient()
+            # TODO: make sure that this is portable
+            src_ssh.load_host_keys(os.path.expanduser("~/.ssh/known_hosts"))
+            src_ssh.connect(src_path.hostname, username=src_path.username)
+            src_sftp = src_ssh.open_sftp()
+            copy = src_sftp.get
     
     for pic in pics:
         # FIXME: which thumbnail to copy? Now only last thumbnail is copied
@@ -290,40 +320,103 @@ def clone_dir(pics, src_path, dest_path, thumbs, link=False):
         else:
             fnames = pic.get_filenames()
         for fname in fnames:
-            src = os.path.join(src_path, fname)
-            dest = os.path.join(dest_path, fname)
+            src = os.path.join(src_path.path, fname)
+            dest = os.path.join(dest_path.path, fname)
             copy(src, dest)
+            
+    if src_path.protocol == "ssh":
+        src_sftp.close()
+        src_ssh.close()
 
 
-def open_cache(path):
-    # TODO: use different cache format that is fully protable and possibly
+def load_index(path):
+    """
+    Retrieve index of pictures from file.
+    """
+    
+    # TODO: use different index format that is fully protable and possibly
     #       text based and human readable (i.e. json, xml?)
-    cache_file = os.path.join(path, config.CACHE_FILE)
-#    logging.debug("Using cache file %s" % cache_file)
-    try:
-        return shelve.open(cache_file, writeback=True)
-    except (error, DBAccessError):
-        print "Error accessing %s" % cache_file
+    index_path = os.path.join(path.path, config.INDEX_FILE)
+    mode = 'rb'
+    if path.islocal:
+        try:
+            index_fh = open(index_path, mode)
+        except IOError as err:
+            print "Error accessing %s: %s" % (index_path, err)
+            sys.exit(2)
+    elif path.protocol == "ssh":
+            ssh = paramiko.SSHClient()
+            # TODO: make sure that this is portable
+            ssh.load_host_keys(os.path.expanduser("~/.ssh/known_hosts"))
+            ssh.connect(path.hostname, username=path.username)
+            sftp = ssh.open_sftp()
+            index_fh = sftp.file(index_path, mode)
+    else:
+        print "%s:// paths are not supported." % path.protocol
         sys.exit(2)
-        
-        
-def read_pics(cache):
+#    logging.debug("Loading from index file %s" % index_path)
     try:
-        pics = cache['pics']
-    except KeyError:
-        print "No pictures found in cache."
+        index = pickle.load(index_fh)
+    except pickle.UnpicklingError as err:
+        print "Error reading from %s: %s" % (index_path, err)
+    finally:
+        # TODO: this finally clause should come from a more global try statement
+        #       that covers the block from where index_fh is created
+        index_fh.close()
+        if path.protocol == "ssh":
+            sftp.close()
+            ssh.close()
+
+    return index
+    
+    
+def write_index(path, index):
+    """
+    Write index of pictures to file.
+    """
+    
+    index_path = os.path.join(path.path, config.INDEX_FILE)
+    mode = 'wb'
+    if path.islocal:
+        try:
+            index_fh = open(index_path, mode)
+        except IOError as err:
+            print "Error accessing %s: %s" % (index_path, err)
+            sys.exit(2)
+    elif path.protocol == "ssh":
+            ssh = paramiko.SSHClient()
+            # TODO: make sure that this is portable
+            ssh.load_host_keys(os.path.expanduser("~/.ssh/known_hosts"))
+            ssh.connect(path.hostname, username=path.username)
+            sftp = ssh.open_sftp()
+            index_fh = sftp.file(index_path, mode)
+    else:
+        print "%s:// paths are not supported." % path.protocol
         sys.exit(2)
-#        logging.error("No pictures found in cache.")
-    return pics
+#    logging.debug("Writing to index file %s" % index_path)
+    try:
+        index = pickle.dump(index, index_fh)
+    except pickle.PicklingError as err:
+        print "Error writing to %s: %s" % (index_path, err)
+    finally:
+        # TODO: this finally clause should come from a more global try statement
+        #       that covers the block from where index_fh is created
+        index_fh.close()
+        if path.protocol == "ssh":
+            sftp.close()
+            ssh.close()
 
 
 def main():
     from optparse import OptionParser, OptionGroup
+    
+    # TODO: supply command to convert repositories with old cache format to
+    #       repositories with new index format
 
     usage = "Usage: %prog [OPTIONS] import\n" \
           + "   or: %prog [OPTIONS] update\n" \
           + "   or: %prog [OPTIONS] clone SRC\n" \
-          + "   or: %prog [OPTIONS] list...\n" \
+          + "   or: %prog [OPTIONS] list\n" \
           + "   or: %prog [OPTIONS] show\n" \
           + "   or: %prog [OPTIONS] check\n" \
           + "   or: %prog [OPTIONS] delete FILES"
@@ -359,69 +452,62 @@ def main():
     if not args:
         parser.error("no command given")
 
-    if not os.path.isdir(opt.path):
-        parser.error("invalid directory: %s" % opt.path)
+    path = Path.fromPath(opt.path)
+    if path.islocal and not path.exists():
+        parser.error("invalid directory: %s" % path)
+        
     # first argument is the command
     cmd = args.pop(0)
 
     if cmd == "import":
-        pics = import_dir(opt.path, opt.verbose)
-        cache = open_cache(opt.path)
-        cache['pics'] = pics
-        cache.close()
+        # TODO: handle remote paths
+        pics = import_dir(path.path, opt.verbose)
+        write_index(path, pics)
     elif cmd == "list":
-        cache = open_cache(opt.path)
-        pics = read_pics(cache)
-        cache.close()
+        pics = load_index(path)
         list_pics(pics, opt.verbose)
     elif cmd == "clean":
-        cache = open_cache(opt.path)
-        pics = read_pics(cache)
-        cache.close()
-        clean_dir(pics, opt.path, opt.verbose)
+        pics = load_index(path)
+        # TODO: handle remote paths
+        clean_dir(pics, path.path, opt.verbose)
     elif cmd == "show":
-        cache = open_cache(opt.path)
-        pics = read_pics(cache)
-        pics = show_dir(pics, opt.path, opt.verbose)
-        cache['pics'] = pics
-        cache.close()
+        pics = load_index(path)
+        if path.isremote:
+            print "Only local repositories are supported for viewing."
+            sys.exit(1)
+        new_pics = show_dir(pics, path.path, opt.verbose)
+        # TODO: only update index if new_pics is not the same as pics
+        write_index(path, new_pics)
     elif cmd == "checksums":
         # TODO: add this to 'list' command with a checksum flag
-        cache = open_cache(opt.path)
-        pics = read_pics(cache)
-        cache.close()
+        pics = load_index(path)
         list_checksums(pics, opt.verbose)
     elif cmd == "check":
-        cache = open_cache(opt.path)
-        pics = read_pics(cache)
-        cache.close()
-        check_dir(pics, opt.path, opt.verbose)
+        pics = load_index(path)
+        # TODO: handle remote paths
+        check_dir(pics, path.path, opt.verbose)
     elif cmd == "delete":
-        cache = open_cache(opt.path)
-        pics = read_pics(cache)
+        pics = load_index(path)
         files = args
-        pics_to_remove = [path2pic(path, pics) for path in files]
-        pics = delete_pics(pics_to_remove, pics, opt.path, opt.verbose)            
-        cache['pics'] = pics
-        cache.close()
+        pics_to_remove = [path2pic(pic_path, pics) for pic_path in files]
+        # TODO: handle remote paths
+        pics = delete_pics(pics_to_remove, pics, path.path, opt.verbose)            
+        write_index(path, pics)
     elif cmd == "update":
         # FIXME: import is a special case of update
-        cache = open_cache(opt.path)
-        pics = read_pics(cache)
-        update_dir(pics, opt.path, opt.verbose)
-        cache['pics'] = pics
-        cache.close()
+        # TODO: maybe call this command sync?
+        pics = load_index(path)
+        # TODO: handle remote paths
+        new_pics = update_dir(pics, opt.path, opt.verbose)
+        # TODO: only update index if new_pics is not the same as pics
+        write_index(path, new_pics)
     elif cmd == "clone":
-        src_path = args.pop(0)
-        if not os.path.isdir(src_path):
+        src_path = Path.fromPath(args.pop(0))
+        if src_path.islocal and not src_path.exists():
             parser.error("invalid directory: %s" % src_path)
-        cache = open_cache(src_path)
-        pics = read_pics(cache)
-        cache.close()
-        clone_dir(pics, src_path, opt.path, opt.thumbs, opt.link)
-        cache = open_cache(opt.path)
-        cache['pics'] = pics
-        cache.close()
+        pics = load_index(src_path)
+        clone_dir(pics, src_path, path, opt.thumbs, opt.link)
+        write_index(path, pics)
     else:
         parser.error("invalid argument: %s" % cmd)
 
@@ -432,6 +518,7 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
+        # FIXME: kill threads, wait for them and then exit
         print "Exiting."
         sys.exit(None)
 

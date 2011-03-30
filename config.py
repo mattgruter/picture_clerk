@@ -11,6 +11,9 @@ __copyright__ = "Copyright (c) 2008 Matthias Grueter"
 __license__ = "GPL"
 
 
+import os.path
+
+
 # number of workers in each stage by default
 DEFAULT_NUM_STAGEWORKERS = 1
 
@@ -26,13 +29,20 @@ EXIV2_BIN = '/usr/bin/exiv2'
 # full path to jhead executable
 JHEAD_BIN = '/usr/bin/jhead'
 
-# cache file name
-CACHE_FILE = '.pic.db'
-
 # file pattern for import
 IMPORT_FILE_PATTERN = '*.NEF'
+
+# PictureClerk directory
+PIC_DIR = ".pic"
+
+# config file
+CONFIG_FILE = os.path.join(PIC_DIR, "config")
+
+# default picture index file
+INDEX_FILE = os.path.join(PIC_DIR, "index")
 
 # loggin on/off
 LOGGING=True
 # logging dir
-LOGDIR='log/'
+LOGDIR=os.path.join(PIC_DIR, "log/")
+
