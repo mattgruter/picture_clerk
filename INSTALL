@@ -1,0 +1,9 @@
+Dependencies:
+
+python-paramiko
+python-dulwich
+python-pyexiv2
+
+qiv
+dcraw
+jhead
