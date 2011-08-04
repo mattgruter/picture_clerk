@@ -1,18 +1,14 @@
 """connector.py
 
 PictureClerk - The little helper for your picture workflow.
-This file contains the Picture class
+This file contains the Connector class
 """
 
 __author__ = "Matthias Grueter (matthias@grueter.name)"
 __version__ = "$Revision: 0.1 $"
-__date__ = "$Date: 2011/03/08 $"
+__date__ = "$Date: 2011/04/24 $"
 __copyright__ = "Copyright (c) 2008 Matthias Grueter"
 __license__ = "GPL"
-
-
-import paramiko
-import os.path
 
 
 class NotConnectedError(Exception):
@@ -28,16 +24,16 @@ class URLNotSupportedError(Exception):
         return repr(self.url)
         
 class ConnectionError(Exception):
-    def __init__(self, error, url):
-        self.error = error
+    def __init__(self, url):
+        self.url = url
     def __str__(self):
-        return repr(self.error, self.url)
+        return repr(self.url)
 
 
 class Connector(object):
     """
-    A Connector object holds the logic on how one can connect to a Repo
-    depending on the type of URL used.
+    Connector objects hold the logic on how to connect to given URLs.
+    This is the base class.
     """
     def __init__(self, url):
         self.url = url
@@ -47,55 +43,43 @@ class Connector(object):
         """
         Establish connection to supplied url
         
-        Raises AlreadyConnectedError, ConnectionError and URLNotSupportedError
+        Raises AlreadyConnectedError
         """
-        if self.isconnected:
-            raise AlreadyConnectedError()
-        elif self.url.islocal:
+        if not self.isconnected:
+            self._connect()
             self.isconnected = True
-        elif self.url.protocol == "ssh":
-            self._ssh = paramiko.SSHClient()
-            self._ssh.load_host_keys(os.path.expanduser('~/.ssh/known_hosts'))
-            try:
-                self._ssh.connect(self.url.hostname, port=self.url.port,
-                                  username=self.url.username)
-                self._sftp = self._ssh.open_sftp()
-            except paramiko.SSHException as e:
-                raise ConnectionError(e, self.url)
-            else:
-                self.isconnected = True
         else:
-            raise URLNotSupportedError(self.url)
+            raise AlreadyConnectedError()
         
     def disconnect(self):
         """
         Cleanly disconnect from supplied url
-        
-        Raises URLNotSupportedError
         """
-        if not self.isconnected:
-            pass
-        elif self.url.islocal:
-            self.isconnected = False
-        elif self.url.protocol == "ssh":
-            self._sftp.close()
-            self._ssh.close()
-            self.isconnected = False
+        if self.isconnected:
+            self._disconnect()
         else:
-            raise URLNotSupportedError(self.url)
+            # do nothing if we're already disconnected
+            pass
             
     def open(self, filename, mode):
         """
         Open the specified file and return a file handle
         
-        Raises NotConnectedError, URLNotSupportedError
+        Raises NotConnectedError
         """
-        if not self.isconnected:
-            raise NotConnectedError()
-        elif self.url.islocal:
-            return open(os.path.join(self.url.path, filename), mode)
-        elif self.url.protocol == "ssh":
-            return self._sftp.open(os.path.join(self.url.path, filename), mode)
+        if self.isconnected:
+            return self._open(filename, mode)
         else:
-            raise URLNotSupportedError(self.url)
+            raise NotConnectedError()
             
+    def mkdir(self, path, mode=0777):
+        """
+        Create the specified directory
+        
+        Raises NotConnectedError
+        """
+        if self.isconnected:
+            self._mkdir(path, mode)
+        else:
+            raise NotConnectedError()
+        

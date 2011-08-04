@@ -12,7 +12,7 @@ class RepoObjectCreationTest(unittest.TestCase):
         """
         __init__ should store supplied attributes and initialize all properties
         """
-        r = Repo(self.connector, self.config_file)
+        r = Repo(self.connector, config_file=self.config_file)
         self.assertEqual(self.connector, r.connector)
         self.assertEqual(self.config_file, r.config_file)
         self.assertEqual(None, r.config)
@@ -61,7 +61,7 @@ class RepoDisconnectTest(unittest.TestCase):
 
     def testConnectorDisconnect(self):
         """
-        connect should call connector's connect method
+        disconnect should call connector's disconnect method
         """       
         self.repo.disconnect()
         self.assertFalse(self.connector.connected) 

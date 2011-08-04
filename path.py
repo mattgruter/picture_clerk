@@ -72,6 +72,10 @@ class Path(object):
                                              self.port, path)
                 else:
                     return "%s://%s%s" % (self.protocol, self.hostname, path)
+                    
+                    
+    def __repr__(self):
+        return self.__str__()
                 
     
     @staticmethod
