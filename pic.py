@@ -89,8 +89,6 @@ def init_repo(path):
     
     # create all secondary directories
     # TODO: only create SHA1, thumb and XMP subdirectory if enabled in config
-
-    
     for directory in config.SHA1_SIDECAR_DIR, config.XMP_SIDECAR_DIR, config.THUMB_SIDECAR_DIR:
         directory = os.path.join(path, directory)
         try:
