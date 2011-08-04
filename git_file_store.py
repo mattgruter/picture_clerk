@@ -19,23 +19,27 @@ from dulwich.objects import Blob, Tree, Commit
 
 
 from file_store import FileStore
+from file_store import FileAlreadyOpenError, FileNotOpenError
+
+# FIXME: base GitFileStore on PlainFileStore
 
 
 class GitFileStore(FileStore):
-    def __init__(self, repo_path, branch, author):
-        self.repo = Repo(repo_path)
-        self.branch = branch
-        self.author = author
+    def __init__(self, path):
+        FileStore.__init__(self, path)
 
-    def open(self, path, mode, revision=None):
-        if not revision:
-            path = os.path.join(self.repo.path, path)
-            return open(path, mode)
+    def open(self, mode, revision=None):
+        if not self.opened:
+            if not revision:
+                self._fh = open(self.path, mode)
+                self.opened = True
+            else: 
+    #            return git.retrieve(path, revision)
+                raise NotImplementedError
         else:
-#            return git.retrieve(path, revision)
-            raise NotImplementedError
+            raise FileAlreadyOpenError
             
-    def commit(self, path):
+    def commit(self):
         # FIXME: this breaks if git repository just got initialized and no
         #        inital commit has been done before.
         
@@ -51,9 +55,10 @@ class GitFileStore(FileStore):
         #           fh.close()
         #           fh.commit()
         
-        file_path = os.path.join(self.repo.path, path)
-        with open(file_path) as f:
-            blob = Blob.from_raw_chunks(Blob.type_num, f.readlines())
+        if self.opened:
+            blob = Blob.from_raw_chunks(Blob.type_num, self._fh.readlines())
+        else:
+            raise FileNotOpenError
             
         # FIXME: get mode from physical file
         mode = 0100644
@@ -82,8 +87,16 @@ class GitFileStore(FileStore):
         self.repo.object_store.add_object(commit)
         self.repo.refs['refs/heads/' + self.branch] = commit.id
 #        self.repo.refs['HEAD'] = commit.id
+
+    def close(self):
+        if self._fh:
+            self._fh.close()
+            self._fh = None
+            self.opened = False
+        else:
+            raise FileNotOpenError
         
-    def rollback(self, path):
+    def rollback(self):
 #        git.revert_hard(path)
         raise NotImplementedError
         

@@ -5,31 +5,38 @@ File system access tools
 
 __author__ = "Matthias Grueter (matthias@grueter.name)"
 __version__ = "$Revision: 0.1 $"
-__date__ = "$Date: 2011/04/01 $"
+__date__ = "$Date: 2011/04/21 $"
 __copyright__ = "Copyright (c) 2011 Matthias Grueter"
 __license__ = "GPL"
 
 
-# Git support
-from dulwich.objects import Blob, Tree, Commit
-import time
+# Exceptions
+class FileAlreadyOpenError(Exception):
+    pass
+    
+class FileNotOpenError(Exception):
+    pass
 
 
+# Base class
 class FileStore(object):
-    def open(self, path, revision):
-        return None
+    def __init__(self, path):
+        self.path = path
+        self._fh = None
+        self.opened = False
+
+    def open(self, revision):
+        raise NotImplementedError
         
-    def commit(self, path):
-        pass
+    def close(self):
+        raise NotImplementedError
         
-    def rollback(self, path):
-        pass
+    def commit(self):
+        raise NotImplementedError
         
-    def get_log(self, path, limit):
-        return []
+    def rollback(self):
+        raise NotImplementedError
         
-        
-class PlainFileStore(FileStore):
-    def open(self, path):
-        return open(path)
+    def get_log(self, limit):
+        raise NotImplementedError
         
