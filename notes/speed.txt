@@ -1,0 +1,8 @@
+Everything should be designed for speed. Nothing is more distracting when manipulating a large collection of images than sluggish software tool. Therefore each part of PictureClerk has to be as fast as possible.
+
+Possible ways for improvements:
+- Cocurrent programming: threads, processes, etc. (see concurrency.txt)
+- Implement CPU intensive parts in C code
+- Run Python in optimized code (python -O)
+
+To ensure speedy execution, test cases should be constructed that detect slow-downs in new versions. This could prevent that once fast software slows down under the weight of more features (see Google Chromium Blog for a similar idea).

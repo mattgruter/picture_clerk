@@ -1,0 +1,13 @@
+All parts of the PictureClerk should be implemented in a best possible concurrent way to reap the benefits from multiple cores and I/O bound processes (i.e. loading images).
+
+There are two possible ways to achieve this:
+
+1. Through distinct python processes
+2. Through python threads
+
+The drawback of the first option is the large overhead and the lack of shared memory. Consider Parallel Python (www.parallelpython.com) to manage concurrent processes.
+
+The problem with alternative 2 is the GIL (global interpreter lock) that prevents concurrent execution of python code (see http://en.wikipedia.org/wiki/Global_Interpreter_Lock). However since most tasks will be I/O bound (i.e. I/O access being the scarce ressource rather than CPU time) this drawback might not be as problematic. To circumvent this limitation and for for best performance Stackless Python (http://www.stackless.com) might be the solution.
+
+In the end a combination of both 1 and 2 will be used: Each distinct building block of the PictureClerk (viewer, import, export, repository handling, backup system, etc.) will run as its own process and only communicate with the other processes by IPC or D-BUS or similar. Common ground will then be the directory structure including any sidecar metadata and caching databases. The advantage of this is that each block can be used independently from the others (i.e. someone might only want to use the viewer without the whole import/export pipelining and directory organization.).
+On the other hand each building block will used threading in its implementation as means to improve efficiency (e.g. The importer has several threads to copy, checksum and backup the images concurrently.)
