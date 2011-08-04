@@ -77,15 +77,27 @@ def init_repo(path):
     """
     Initializes a directory as a PictureClerk repsoitory.
     """
-    
-    # TODO: handle remote paths
-    
+
+    # create PictureClerk main directory
+    # TODO: handle remote paths 
     pic_dir = os.path.join(path, config.PIC_DIR)
     try:
         os.mkdir(pic_dir)
     except OSError as err:
-        print "Unable to initialize directory %s (%s)" % (path, err)
+        print "Error initializing %s: %s" % (path, err)
         sys.exit(1)
+    
+    # create all secondary directories
+    # TODO: only create SHA1, thumb and XMP subdirectory if enabled in config
+
+    
+    for directory in config.SHA1_SIDECAR_DIR, config.XMP_SIDECAR_DIR, config.THUMB_SIDECAR_DIR:
+        directory = os.path.join(path, directory)
+        try:
+            os.mkdir(directory)
+        except OSError as err:
+            print "Error initializing %s: %s" % (path, err)
+            sys.exit(1)
 
 
 def import_dir(path, verbose):
@@ -109,12 +121,16 @@ def import_dir(path, verbose):
     # create Picture instances and place them in a set to avoid duplicates
     pics = set([ Picture(f) for f in files ])
     # pipeline instructions: retrieve metadata & thumbnail, calculate checksum, rotate thumbnails
-    instructions = [HashDigestWorker, Exiv2XMPSidecarWorker,
-                    DCRawThumbWorker, AutorotWorker]
+#    instructions = [HashDigestWorker, Exiv2XMPSidecarWorker,
+#                    DCRawThumbWorker, AutorotWorker]
+    instructions = [HashDigestWorker, ThumbWorker, AutorotWorker]
+#    instructions = [ThumbWorker]
+
     recipe = Recipe(instructions)
 
     if config.LOGGING:
         # create logfile directory if it doesn't exist yet
+        # TODO: move this into init_repo method
         if not os.path.isdir(os.path.join(path, config.LOGDIR)):
             try:
                 os.mkdir(os.path.join(path, config.LOGDIR))

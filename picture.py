@@ -31,9 +31,6 @@ class Picture(object):
     def __init__(self, filename):
         # TODO: Maybe use descriptors for this
         # TODO: Maybe test if two pictures are the same file using os.path.samefile
-        # FIXME: filename checking shouldn't be done here. for all Picture
-        #        object cares it doesn't matter if the file actually exists.
-#        assert os.path.isfile(filename), "invalid path: %s" % filename
         self.filename = filename
         # ensure that filename has no directory component
         assert not os.path.dirname(filename) and os.path.dirname(filename) != '.', \
@@ -59,7 +56,7 @@ class Picture(object):
     def _str_sidecars(self):
         rtn = str()
         for s in self._sidecars:
-            rtn += ('\n   %s: %s' % (s.content_type, s.filename))
+            rtn += ('\n   %s: %s' % (s.content_type, s.path))
         return rtn
         
     def _str_metadata(self):
@@ -85,16 +82,16 @@ class Picture(object):
         return cmp(self.filename, other.filename)
                
     def get_filenames(self):
-        return [self.filename] + [sidecar.filename for sidecar in self._sidecars]
+        return [self.filename] + [sidecar.path for sidecar in self._sidecars]
         
-    def add_sidecar(self, filename, content_type):
+    def add_sidecar(self, path, content_type):
         # TODO: Maybe use descriptors for this
-        sidecar = Sidecar(filename, content_type)
+        sidecar = Sidecar(path, content_type)
         sidecar.picture = self
         self._sidecars.add(sidecar)
         # if sidecar is a thumbnail, replace the existing thumbnail with this one.
         if content_type == "Thumbnail":
-            self.thumbnail = filename
+            self.thumbnail = path
         
     def del_sidecar(self, sidecar):
         self._sidecars.discard(sidecar)
@@ -112,25 +109,19 @@ class Picture(object):
 class Sidecar(object):
     """
     A Sidecar object holds the path and the type of content of a sidecar file.
-    In addition it stores a reference to the picture object it associated to.
+    In addition it stores a reference to the picture object it is associated to.
     
     Constructor arguments:
-        filename (string)       :   filename of sidecar file
+        path (string)           :   path of sidecar file
         content_type (string)   :   content type (e.g. checksum, thumbnail, xmp, ...)
     """
-    def __init__(self, filename, content_type):
-        # FIXME: filename checking shouldn't be done here. for all Picture
-        #        object cares it doesn't matter if the file actually exists.
-#        assert os.path.isfile(filename), "invalid path: %s" % filename
-        self.filename = filename
-        # ensure that filename has no directory component
-        assert not os.path.dirname(filename) and os.path.dirname(filename) != '.', \
-            "path has directory component: %s" % filename
+    def __init__(self, path, content_type):
+        self.path = path
         self.content_type = content_type
         self.picture = None
         
     def __str__(self):
-        return '%s: %s' % (self.content_type, self.filename)
+        return '%s: %s' % (self.content_type, self.path)
         
 
 #class Thumbnail(Sidecar):
@@ -138,7 +129,7 @@ class Sidecar(object):
 #    Thumbnail object
 #    
 #    Constructor arguments:
-#        filename (string)       :   filename of sidecar file
+#        path (string)   :   path of sidecar file
 #    """
-#    def __init__(self, filename):
-#        Sidecar.__init__(self, filename, content_type="Thumbnail")      
+#    def __init__(self, path):
+#        Sidecar.__init__(self, path, content_type="Thumbnail")      

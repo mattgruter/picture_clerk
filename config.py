@@ -41,8 +41,19 @@ CONFIG_FILE = os.path.join(PIC_DIR, "config")
 # default picture index file
 INDEX_FILE = os.path.join(PIC_DIR, "index")
 
-# loggin on/off
-LOGGING=True
-# logging dir
-LOGDIR=os.path.join(PIC_DIR, "log/")
+# index format version
+INDEX_FORMAT_VERSION = 1
 
+# logging on/off
+LOGGING = True
+LOGDIR = os.path.join(PIC_DIR, "log")
+
+# SHA1 sidecar files on/off
+SHA1_SIDECAR_ENABLED = True
+SHA1_SIDECAR_DIR = os.path.join(PIC_DIR, "sha1")
+
+# Thumbnail sidecar file destination
+THUMB_SIDECAR_DIR = "jpg"
+
+# XMP metadata sidecar file destination
+XMP_SIDECAR_DIR = os.path.join(PIC_DIR, "xmp")
