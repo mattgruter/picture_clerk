@@ -1,6 +1,6 @@
 import unittest
 
-from connector import *
+from ..connector import *
 
 
 class ConnectorObjectCreationTest(unittest.TestCase):

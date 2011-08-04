@@ -1,7 +1,7 @@
 import unittest
 
-from repo import *
-import config
+from ..repo import *
+from .. import config
 
 
 class RepoObjectCreationTest(unittest.TestCase):

@@ -1,6 +1,6 @@
 import unittest
 
-from path import *
+from ..path import *
 
 class PathObjectCreationTest(unittest.TestCase):
     path = "test-path"
