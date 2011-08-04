@@ -52,8 +52,9 @@ LOGDIR = os.path.join(PIC_DIR, "log")
 SHA1_SIDECAR_ENABLED = True
 SHA1_SIDECAR_DIR = os.path.join(PIC_DIR, "sha1")
 
-# Thumbnail sidecar file destination
+# ThumbWorker configuration
 THUMB_SIDECAR_DIR = "jpg"
+THUMB_COPY_METADATA = True
 
 # XMP metadata sidecar file destination
 XMP_SIDECAR_DIR = os.path.join(PIC_DIR, "xmp")

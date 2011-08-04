@@ -123,8 +123,7 @@ def import_dir(path, verbose):
     # pipeline instructions: retrieve metadata & thumbnail, calculate checksum, rotate thumbnails
 #    instructions = [HashDigestWorker, Exiv2XMPSidecarWorker,
 #                    DCRawThumbWorker, AutorotWorker]
-    instructions = [HashDigestWorker, ThumbWorker, AutorotWorker]
-#    instructions = [ThumbWorker]
+    instructions = [HashDigestWorker, ThumbWorker, AutorotWorker, MetadataWorker]
 
     recipe = Recipe(instructions)
 

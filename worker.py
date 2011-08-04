@@ -151,8 +151,31 @@ class ThumbWorker(Worker):
         thumb = metadata.previews[-1]
         thumb_filename = picture.basename + '.thumb' + thumb.extension
         thumb_path = os.path.join(config.THUMB_SIDECAR_DIR, thumb_filename)
+        
         # TODO: save MIME type
 #        thumb_mime_type = thumb.mime_type
+
+        # copy metadata from RAW file to thumbnail (if enabled in config)
+        if config.THUMB_COPY_METADATA:
+            thumb_metadata = pyexiv2.ImageMetadata.from_buffer(thumb.data)
+            thumb_metadata.read()
+            # copy all metadata from RAW file to thumbnail
+            metadata.copy(thumb_metadata)
+            
+            # modify EXIF tags for the thumbnail
+            # tag: Image Compression
+            # TODO: Compression tag should be set according to thumbnail mime
+            #       type. See http://exiv2.org/tags.html for information on the
+            #       compression tag (e.g. 7 = JPEG).
+            thumb_metadata['Exif.Image.Compression'] = 7
+            # TODO: should we modify more tags?
+            
+            thumb_metadata.write()
+            thumb_buf = thumb_metadata.buffer
+        else:
+            thumb_buf = thumb.data
+            
+        # save thumbnail to file
         try:
             thumb_fh = open(thumb_path, 'wb')
         except IOError:
@@ -160,7 +183,7 @@ class ThumbWorker(Worker):
             return False
         else:
             with thumb_fh:
-                thumb_fh.write(thumb.data)
+                thumb_fh.write(thumb_buf)
             return True
             
     def _compile_sidecar_path(self, picture):
@@ -184,28 +207,12 @@ class MetadataWorker(Worker):
     
     name = 'MetadataWorker'
     
-    def _parse_exif(self, tag, value):
-        # TODO: use eval to get to a human-readable value
-#        return str(value)
-
-        if isinstance(value, pyexiv2.Rational):
+    def _parse_exif(self, exif_tag):
+        if isinstance(exif_tag, pyexiv2.Rational):
             # TODO: convert rational numbers to more sane values (rat, int?)
-            return value
+            return exif_tag.human_value
         else:
-            if tag == 'Exif.Photo.ExposureProgram':
-                # TODO: how to decode to a meaningful string?
-                return value
-            elif tag == 'Exif.Photo.MeteringMode':
-                # TODO: how to decode to a meaningful string?
-                return value
-            elif tag == 'Exif.Photo.Flash':
-                # TODO: how to decode to a meaningful string?
-                return value
-            elif tag == 'Exif.Photo.LightSource':
-                # TODO: how to decode to a meaningful string?
-                return value
-            else:
-                return value
+            return exif_tag.human_value
             
     def _work(self, picture, jobnr):
         # TODO: catch exceptions of not accessible files
@@ -215,7 +222,7 @@ class MetadataWorker(Worker):
         _keys = ['Exif.Photo.ExposureTime', 'Exif.Photo.FNumber',
                  'Exif.Photo.ExposureProgram', 'Exif.Photo.ISOSpeedRatings',
                  'Exif.Photo.DateTimeOriginal', 'Exif.Photo.DateTimeDigitized',
-                 'Exif.Photo.ExposureBiasValue', 'Exif.Photo.MaxApertureValue',
+                 'Exif.Photo.ExposureBiasValue',
                  'Exif.Photo.MeteringMode', 'Exif.Photo.WhiteBalance',
                  'Exif.Photo.Flash', 'Exif.Photo.LightSource',
                  'Exif.Photo.FocalLength', 'Exif.Photo.FocalLengthIn35mmFilm',
@@ -224,14 +231,13 @@ class MetadataWorker(Worker):
         try:
             metadata = pyexiv2.ImageMetadata(_picFname)
             metadata.read()
-            metadata.cacheAllExifTags()
         except IOError:
             # How should this be handled?
             print 'File not found: %s' % _picFname
         # TODO: better way to copy part of a dictionary?
         for k in _keys:
             try:
-                picture.metadata[k] = self._parse_exif(k, metadata[k])
+                picture.metadata[k] = self._parse_exif(metadata[k])
             except IndexError:
                 picture.metadata[k] = None
             except IOError:
@@ -387,7 +393,6 @@ class AutorotWorker(SubprocessWorker):
     
     def _compile_commands(self, picture):
         cmd = [ self._bin, self._args, picture.thumbnail ]
-        print cmd
         return cmd,
 
         
