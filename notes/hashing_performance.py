@@ -17,7 +17,7 @@ if __name__=='__main__':
     
     num_runs = 10
     
-    path = './test_album'
+    path = '../test_repo'
     dirlist = os.listdir(path)
     files = fnmatch.filter(dirlist, "*.NEF")
     files = [ os.path.join(path, f) for f in files ]
