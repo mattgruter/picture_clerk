@@ -55,9 +55,13 @@ class SSHConnector(Connector):
         """
         return self._sftp.open(os.path.join(self.url.path, filename), mode)
             
-    def _mkdir(self, path, mode):
+    def _mkdir(self, rel_path, mode):
         """
         Create the specified directory
         """
-        self._sftp.mkdir(os.path.join(self.url.path, path), mode)
+        if rel_path == '.':
+            path = self.url.path
+        else:
+            path = os.path.join(self.url.path, rel_path)
+        self._sftp.mkdir(path, mode)
         

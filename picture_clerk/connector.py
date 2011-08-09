@@ -39,17 +39,23 @@ class Connector(object):
         self.url = url
         self.isconnected = False
         
+    def __repr__(self):
+        return "%s(%s)" % (self.__class__.__name__, repr(self.url))
+        
     def connect(self):
         """
         Establish connection to supplied url
         
         Raises AlreadyConnectedError
         """
+        # TODO: connect & disconnect should be implemented as ContextManager so
+        #       that they can be used with the "with" statement.
         if not self.isconnected:
             self._connect()
             self.isconnected = True
         else:
-            raise AlreadyConnectedError()
+            # do nothing if we're already connected
+            pass
         
     def disconnect(self):
         """
@@ -57,6 +63,7 @@ class Connector(object):
         """
         if self.isconnected:
             self._disconnect()
+            self.isconnected = False
         else:
             # do nothing if we're already disconnected
             pass
@@ -72,14 +79,14 @@ class Connector(object):
         else:
             raise NotConnectedError()
             
-    def mkdir(self, path, mode=0777):
+    def mkdir(self, rel_path, mode=0777):
         """
-        Create the specified directory
+        Create the specified directory at the supplied relative path
         
         Raises NotConnectedError
         """
         if self.isconnected:
-            self._mkdir(path, mode)
+            self._mkdir(rel_path, mode)
         else:
             raise NotConnectedError()
         

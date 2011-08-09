@@ -15,7 +15,7 @@ import os
 
 
 from connector import Connector
-from connector import ConnectionError
+#from connector import ConnectionError
 
 
 class LocalConnector(Connector):
@@ -33,8 +33,11 @@ class LocalConnector(Connector):
         
         Raises ConnectionError
         """
-        if not os.path.exists(self.url.path):
-            raise ConnectionError(self.url)
+        # TODO: should connect check if path exists?
+#        if not os.path.exists(self.url.path):
+#            raise ConnectionError(self.url)
+        return
+        
         
     def _disconnect(self):
         """
@@ -48,9 +51,13 @@ class LocalConnector(Connector):
         """
         return open(os.path.join(self.url.path, filename), mode)
             
-    def _mkdir(self, path, mode):
+    def _mkdir(self, rel_path, mode):
         """
         Create the specified directory
         """
-        os.mkdir(os.path.join(self.url.path, path), mode)
+        if rel_path == '.':
+            path = self.url.path
+        else:
+            path = os.path.join(self.url.path, rel_path)
+        os.mkdir(path, mode)
         

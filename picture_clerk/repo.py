@@ -1,27 +1,30 @@
-"""repo.py
-
-PictureClerk - The little helper for your picture workflow.
-This file contains the Picture class
 """
+Created on 2011/08/09
 
-__author__ = "Matthias Grueter (matthias@grueter.name)"
-__version__ = "$Revision: 0.1 $"
-__date__ = "$Date: 2011/03/08 $"
-__copyright__ = "Copyright (c) 2008 Matthias Grueter"
-__license__ = "GPL"
-
-
+@author: Matthias Grueter <matthias@grueter.name>
+@copyright: Copyright (c) 2011 Matthias Grueter
+@license: GPL
+"""
 try:
-   import cPickle as pickle
-except:
-   import pickle
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 import ConfigParser
 
 import config
 
 
-class IndexEmptyError(Exception):
+class RepoNotInitializedError(Exception):
+    def __init__(self, repo):
+        self.repo = repo
+    def __str__(self):
+        return repr(self.repo)
+
+class IndexMissingError(Exception):
+    pass
+
+class IndexParsingError(Exception):
     pass
     
 
@@ -39,11 +42,27 @@ class Repo(object):
         self._index_fh = None
         self.index = None
         
+    
+    def __repr__(self):
+        return "Repo(%s, %s, %s)" % (repr(self.connector), repr(self.pic_dir),
+                                     repr(self.config_file))
+    
+    def __str__(self):
+        return repr(self)
+    
+        
     def connect(self):
         """
         Connect to the repository.
-        """
+        """        
         self.connector.connect()
+        
+        try:
+            self.load_config()
+        except IOError:
+            self.connector.disconnect()
+            raise RepoNotInitializedError(self)
+            
             
     def disconnect(self):
         """
@@ -57,47 +76,71 @@ class Repo(object):
             pass
         self.connector.disconnect()     
     
-    def init(self):
+    
+    def init_repo(self):
         """
         Initialize a repository
         
-        create .pic directory and create default configuration file
+        create .pic directory, create a default configuration file and create
+        an empty index file
         """
+        # create necessary directories
         self.connector.mkdir(self.pic_dir)
-        self.write_default_config()
         
-    def write_default_config(self):
+        # create default config and write it to file
+        self._create_default_config()
+        self.write_config()
+        
+        # write empty index
+        self.write_index()
+        
+
+    def _create_default_config(self):
         """
-        Write the default repo configuration to the repo's config file
+        Create ConfigParser instance with default configuration
         """
-        with self.connector.open(self.config_file, 'w') as self._config_fh:
-            self._config_fh.write("[core]\n")
-            self._config_fh.write("\tindex_file = %s\n" % config.INDEX_FILE)
-            self._config_fh.write("\tindex_format_version = %i\n" % \
-                                  config.INDEX_FORMAT_VERSION)
+        self.config = ConfigParser.ConfigParser()
+        self.config.add_section("core")
+        self.config.set("core", "index_file", config.INDEX_FILE)
+        self.config.set("core", "index_format_version",
+                        config.INDEX_FORMAT_VERSION)
+            
     
     def load_config(self):
         """
         Load the repo configuration from file.
         """
-        with self.connector.open(self.config_file, 'rb') as self._config_fh:
+        with self.connector.open(self.config_file, 'r') as self._config_fh:
             # TODO: how to handle if config file does not exist?
             # TODO: check out ConfigParser's handling of defaults
             self.config = ConfigParser.ConfigParser()
             self.config.readfp(self._config_fh)
+            
+            
+    def write_config(self):
+        """
+        Write the repo configuration to file.
+        """
+        with self.connector.open(self.config_file, 'w') as self._config_fh:
+            self.config.write(self._config_fh)
+
             
     def load_index(self):
         """
         Load picture index from index file.
         """
         index_path = self.config.get("core", "index_file")
-        self._index_fh = self.connector.open(index_path, 'rb')
+        try:
+            self._index_fh = self.connector.open(index_path, 'rb')
+        except IOError:
+            raise IndexMissingError()
         try:
             self.index = pickle.load(self._index_fh)
         except pickle.UnpicklingError:
-            raise IndexEmptyError()
+            raise IndexParsingError()
         finally:
             self._index_fh.close()
+
             
     def write_index(self):
         """
@@ -106,4 +149,8 @@ class Repo(object):
         index_path = self.config.get("core", "index_file")
         with self.connector.open(index_path, 'wb') as self._index_fh:
             pickle.dump(self.index, self._index_fh)
+            
+    
+
+    
 

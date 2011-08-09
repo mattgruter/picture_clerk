@@ -75,7 +75,11 @@ class Path(object):
                     
                     
     def __repr__(self):
-        return self.__str__()
+        # TODO: only strings should be escaped with '', None and integers
+        #       should not be escaped. --> doublecheck with Python doc.
+        return "Path('%s', '%s', '%s', '%s', '%s')" % \
+            (self.path, self.protocol,
+             self.hostname, self.username, str(self.port))
                 
     
     @staticmethod
