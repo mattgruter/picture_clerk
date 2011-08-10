@@ -1,0 +1,12 @@
+* Implement a change-log for every action performed on a Picture or Repo
+  instance. This could be achieved by providing a method decorator that does
+  the necessary logging to a history log. Every log entry should consist of the
+  method call with arguments (Python executable), a description of the action
+  and the method call (with arguments) needed to undo the action.
+  
+  T.ex. in Repo
+  
+  @track_history(action='add(...)', descr=('added picture to index'),
+  				 undo_action='del(...)')
+  def add(self, picture):
+  	<...> 
