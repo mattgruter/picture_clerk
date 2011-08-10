@@ -37,9 +37,7 @@ class Repo(object):
         self.connector = connector
         self.pic_dir = pic_dir
         self.config_file = config_file
-        self._config_fh = None
         self.config = None
-        self._index_fh = None
         self.index = None
         
     
@@ -68,12 +66,6 @@ class Repo(object):
         """
         Disconnect from the repository.
         """
-        # try any potentially open file handles
-        try:
-            self._config_fh.close()
-            self._index_fh.close()
-        except AttributeError:
-            pass
         self.connector.disconnect()     
     
     
@@ -110,19 +102,19 @@ class Repo(object):
         """
         Load the repo configuration from file.
         """
-        with self.connector.open(self.config_file, 'r') as self._config_fh:
+        with self.connector.open(self.config_file, 'r') as config_fh:
             # TODO: how to handle if config file does not exist?
             # TODO: check out ConfigParser's handling of defaults
             self.config = ConfigParser.ConfigParser()
-            self.config.readfp(self._config_fh)
+            self.config.readfp(config_fh)
             
             
     def write_config(self):
         """
         Write the repo configuration to file.
         """
-        with self.connector.open(self.config_file, 'w') as self._config_fh:
-            self.config.write(self._config_fh)
+        with self.connector.open(self.config_file, 'w') as config_fh:
+            self.config.write(config_fh)
 
             
     def load_index(self):
@@ -131,15 +123,15 @@ class Repo(object):
         """
         index_path = self.config.get("core", "index_file")
         try:
-            self._index_fh = self.connector.open(index_path, 'rb')
+            index_fh = self.connector.open(index_path, 'rb')
         except IOError:
             raise IndexMissingError()
         try:
-            self.index = pickle.load(self._index_fh)
+            self.index = pickle.load(index_fh)
         except pickle.UnpicklingError:
             raise IndexParsingError()
         finally:
-            self._index_fh.close()
+            index_fh.close()
 
             
     def write_index(self):
@@ -147,8 +139,8 @@ class Repo(object):
         Write picture index to index file
         """
         index_path = self.config.get("core", "index_file")
-        with self.connector.open(index_path, 'wb') as self._index_fh:
-            pickle.dump(self.index, self._index_fh)
+        with self.connector.open(index_path, 'wb') as index_fh:
+            pickle.dump(self.index, index_fh)
             
     
 

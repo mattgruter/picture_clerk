@@ -89,4 +89,15 @@ class Connector(object):
             self._mkdir(rel_path, mode)
         else:
             raise NotConnectedError()
-        
+
+    def copy(self, src, dest_connector, dest):
+        """
+        Copy file located at src relative to this connector's URL to file
+        located at dest relative to dest_connector's URL.
+        """
+        if self.isconnected:
+            dest_connector.connect()
+            with self.open(src, 'r') as src_fh:
+                with dest_connector.open(dest, 'w') as dest_fh:
+                    dest_fh.writelines(src_fh.readlines())
+            dest_connector.disconnect()

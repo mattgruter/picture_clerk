@@ -26,6 +26,7 @@ class ObjectCreationTest(unittest.TestCase):
         """
         r = Repo(self.connector, pic_dir=self.pic_dir,
                  config_file=self.config_file)
+        self.assertIsInstance(r, Repo)
         self.assertEqual(self.connector, r.connector)
         self.assertEqual(self.pic_dir, r.pic_dir)
         self.assertEqual(self.config_file, r.config_file)
@@ -37,6 +38,7 @@ class ObjectCreationTest(unittest.TestCase):
         Repo.__init__ should apply defaults to undefined attributes
         """
         r = Repo(self.connector)
+        self.assertIsInstance(r, Repo)
         self.assertEqual(self.connector, r.connector)
         self.assertEqual(config.PIC_DIR, r.pic_dir)
         self.assertEqual(config.CONFIG_FILE, r.config_file)
@@ -71,17 +73,12 @@ class DisconnectTest(unittest.TestCase):
     def setUp(self):
         self.connector = mock.Mock(spec_set=connector.Connector)
         self.repo = Repo(self.connector, None)
-        self.repo._config_fh = mock.Mock()
-        self.repo._index_fh = mock.Mock()
 
     def test_disconnect(self):
         """
-        Repo.disconnect should call connector's disconnect method and close all
-        file handles
+        Repo.disconnect should call connector's disconnect method
         """       
         self.repo.disconnect()
-        self.repo._config_fh.close.assert_called_once_with()
-        self.repo._index_fh.close.assert_called_once_with()
         self.connector.disconnect.assert_called_with()
         
 
