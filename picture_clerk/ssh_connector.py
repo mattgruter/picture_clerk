@@ -11,6 +11,7 @@ __copyright__ = "Copyright (c) 2008 Matthias Grueter"
 __license__ = "GPL"
 
 
+import os
 import paramiko
 
 
