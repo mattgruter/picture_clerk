@@ -1,6 +1,7 @@
 import unittest
 
-from ..path import *
+from path import Path
+from path import InvalidURI, ExistsNotSupported
 
 class PathObjectCreationTest(unittest.TestCase):
     path = "test-path"

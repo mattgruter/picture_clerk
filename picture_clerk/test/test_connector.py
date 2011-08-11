@@ -1,13 +1,13 @@
 import unittest
 
-from ..connector import *
+from connector import Connector
 
 
 class ConnectorObjectCreationTest(unittest.TestCase):
     url = "testurl"
     
     def setUp(self):
-       self.connector = Connector(self.url) 
+        self.connector = Connector(self.url) 
     
     def testAttributes(self):
         """
