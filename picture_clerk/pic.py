@@ -195,12 +195,12 @@ def clean_pics(pics, path, verbose):
             print 'Removing all associated sidecar files of %s.' % pic.filename
         for s in pic._sidecars:
             try:
-                os.remove(os.path.join(path, s.filename))
+                os.remove(os.path.join(path, s.path))
             except OSError:
                 # FIXME: shouldn't fail if file is not present (we just don't
                 #        care then), but it should fail if we can't remove the
                 #        file due to wrong permissions.
-                print 'Error: Unable to remove sidecar file %s.' % s.filename
+                print 'Error: Unable to remove sidecar file %s.' % s.path
                 sys.exit(1)
         pic._sidecars = []
     return pics
@@ -256,14 +256,15 @@ def show_dir(pics, path, verbose):
         print 'QIV exited.'
     # TODO: QivController should return a list of Picture references instead of
     #       a list of thumbnail files in trash (path2pic within QivController?)
-    trashContent = [path2pic(pic_path, pics) for pic_path in qivCtrl.getTrashContent()]
+    trashContent = [path2pic(os.path.join(config.THUMB_SIDECAR_DIR, pic_path), pics) for pic_path in qivCtrl.getTrashContent()]
     trashPath = qivCtrl.getTrashPath()
     if trashContent:
         print 'Deleted pictures:'
         for pic in trashContent:
             print '  %s' % pic.filename
             # move deleted thumbnails back into original directory
-            os.rename(os.path.join(trashPath, pic.thumbnail), os.path.join(path, pic.thumbnail))
+            path_in_trash = os.path.join(trashPath, os.path.basename(pic.thumbnail))
+            os.rename(path_in_trash, os.path.join(path, pic.thumbnail))
         os.rmdir(trashPath)
         delChoice = raw_input('Do you want to permanently delete above pictures [yN]: ')
         if delChoice == 'y' or delChoice == 'Y':
@@ -328,7 +329,7 @@ def clone_dir(pics, src_path, dest_path, thumbs, link=False):
     for pic in pics:
         # FIXME: which thumbnail to copy? Now only last thumbnail is copied
         if thumbs:
-            fnames = [pic.get_thumbnails()[-1].filename]
+            fnames = [pic.get_thumbnails()[-1].path]
         else:
             fnames = pic.get_filenames()
         for fname in fnames:
