@@ -101,3 +101,5 @@ class Connector(object):
                 with dest_connector.open(dest, 'w') as dest_fh:
                     dest_fh.writelines(src_fh.readlines())
             dest_connector.disconnect()
+        else:
+            raise NotConnectedError()

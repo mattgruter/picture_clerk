@@ -8,9 +8,8 @@ Created on 2011/03/08
 import unittest
 import mock
 
-import config
 from repo import Repo
-from repo import RepoNotInitializedError, IndexParsingError
+from repo import IndexParsingError
 
 
 class ObjectCreationTest(unittest.TestCase):
@@ -19,26 +18,14 @@ class ObjectCreationTest(unittest.TestCase):
     
     def test_attributes(self):
         """
-        Repo.__init__ should store attributes and initialize all properties
-        """
-        r = Repo(pic_dir=self.pic_dir)
-        self.assertIsInstance(r, Repo)
-        self.assertEqual(self.pic_dir, r.pic_dir)
-        self.assertEqual(None, r.config)
-        self.assertEqual(set(), r.index)
-        
-    def test_attribute_defaults(self):
-        """
-        Repo.__init__ should apply defaults to undefined attributes
+        Repo.__init__ should initialize all config and index attributes
         """
         r = Repo()
         self.assertIsInstance(r, Repo)
-        self.assertEqual(config.PIC_DIR, r.pic_dir)
         self.assertEqual(None, r.config)
         self.assertEqual(set(), r.index)
      
      
-#@mock.patch('ConfigParser.ConfigParser')    
 class ConfigTest(unittest.TestCase):
     def setUp(self):
         # create Repo instance
@@ -46,7 +33,7 @@ class ConfigTest(unittest.TestCase):
         # mock file handle
         self.config_fh = mock.Mock(spec_set=file)
         # mock config instance & patch ConfigParser
-        self.patcher = mock.patch('ConfigParser.ConfigParser')
+        self.patcher = mock.patch('ConfigParser.ConfigParser', spec_set=True)
         self.mock_config_parser = self.patcher.start()
         self.mock_config = self.mock_config_parser.return_value
 
@@ -76,8 +63,7 @@ class ConfigTest(unittest.TestCase):
         # config should be written to mocked file handle 
         self.mock_config.write.assert_called_once_with(self.config_fh)
         
-        
-#@mock.patch('repo.pickle')          
+
 class IndexTest(unittest.TestCase):
     def setUp(self):
         # create Repo instance
@@ -85,7 +71,7 @@ class IndexTest(unittest.TestCase):
         # mock file handle
         self.index_fh = mock.Mock(spec_set=file)
         # mock index instance & patch ConfigParser
-        self.patcher = mock.patch('repo.pickle')
+        self.patcher = mock.patch('repo.pickle', spec_set=True)
         self.mock_pickle = self.patcher.start()
         self.mock_index = 'mock index'
         self.mock_pickle.load.return_value = self.mock_index

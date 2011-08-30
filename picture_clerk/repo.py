@@ -15,15 +15,6 @@ import ConfigParser
 import config
 
 
-class RepoNotInitializedError(Exception):
-    def __init__(self, repo):
-        self.repo = repo
-    def __str__(self):
-        return repr(self.repo)
-
-class IndexMissingError(Exception):
-    pass
-
 class IndexParsingError(Exception):
     pass
     
@@ -32,14 +23,13 @@ class Repo(object):
     """
     PictureClerk repository
     """
-    def __init__(self, pic_dir=config.PIC_DIR):
-        self.pic_dir = pic_dir
+    def __init__(self):
         self.config = None
         self.index = set()
         
     
     def __repr__(self):
-        return "Repo(%s)" % repr(self.pic_dir)
+        return "Repo()"
     
     
     def __str__(self):
