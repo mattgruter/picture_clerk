@@ -14,12 +14,14 @@ __license__ = "GPL"
 import os
 import sys
 import fnmatch
+import time
 import shutil
 import paramiko
+
 try:
-   import cPickle as pickle
+    import cPickle as pickle
 except:
-   import pickle
+    import pickle
 
 from recipe import *
 from worker import *
@@ -32,44 +34,44 @@ from path import *
 
 class ProgressBar:
     # (c) by Randy Pargman, Wed, 11 Dec 2002
-	def __init__(self, label='Progress', minValue = 0, maxValue=100, totalWidth=12):
-		self.progBar = "[]"   # This holds the progress bar string
-		self.label = label
-		self.min = minValue
-		self.max = maxValue
-		self.span = maxValue - minValue
-		self.width = totalWidth
-		self.amount = 0       # When amount == max, we are 100% done 
-		self.updateAmount(0)  # Build progress bar string
+    def __init__(self, label='Progress', minValue = 0, maxValue=100, totalWidth=12):
+        self.progBar = "[]"   # This holds the progress bar string
+        self.label = label
+        self.min = minValue
+        self.max = maxValue
+        self.span = maxValue - minValue
+        self.width = totalWidth
+        self.amount = 0       # When amount == max, we are 100% done 
+        self.updateAmount(0)  # Build progress bar string
 
-	def updateAmount(self, newAmount):
-		if newAmount < self.min: newAmount = self.min
-		if newAmount > self.max: newAmount = self.max
-		self.amount = newAmount
+    def updateAmount(self, newAmount):
+        if newAmount < self.min: newAmount = self.min
+        if newAmount > self.max: newAmount = self.max
+        self.amount = newAmount
 
-		# Figure out the new percent done, round to an integer
-		diffFromMin = float(self.amount - self.min)
-		percentDone = (diffFromMin / float(self.span)) * 100.0
-		percentDone = round(percentDone)
-		percentDone = int(percentDone)
+        # Figure out the new percent done, round to an integer
+        diffFromMin = float(self.amount - self.min)
+        percentDone = (diffFromMin / float(self.span)) * 100.0
+        percentDone = round(percentDone)
+        percentDone = int(percentDone)
 
-		# Figure out how many hash bars the percentage should be
-		allFull = self.width - 2
-		numHashes = (percentDone / 100.0) * allFull
-		numHashes = int(round(numHashes))
+        # Figure out how many hash bars the percentage should be
+        allFull = self.width - 2
+        numHashes = (percentDone / 100.0) * allFull
+        numHashes = int(round(numHashes))
 
-		# build a progress bar with hashes and spaces
-		self.progBar = "[" + '#'*numHashes + ' '*(allFull-numHashes) + "]"
+        # build a progress bar with hashes and spaces
+        self.progBar = "[" + '#'*numHashes + ' '*(allFull-numHashes) + "]"
 
-		# figure out where to put the percentage, roughly centered
-		percentPlace = (len(self.progBar) / 2) - len(str(percentDone)) 
-		percentString = str(percentDone) + "%"
+        # figure out where to put the percentage, roughly centered
+        percentPlace = (len(self.progBar) / 2) - len(str(percentDone)) 
+        percentString = str(percentDone) + "%"
 
-		# slice the percentage into the bar
-		self.progBar = self.label + ": " + self.progBar[0:percentPlace] + percentString + self.progBar[percentPlace+len(percentString):]
+        # slice the percentage into the bar
+        self.progBar = self.label + ": " + self.progBar[0:percentPlace] + percentString + self.progBar[percentPlace+len(percentString):]
 
-	def __str__(self):
-		return str(self.progBar)
+    def __str__(self):
+        return str(self.progBar)
 
 
 def init_repo(path):
@@ -98,8 +100,6 @@ def init_repo(path):
 
 
 def import_dir(path, verbose):
-    import time
-    
     init_repo(path)
     
     # TODO: use os.walk to search for files recursively
@@ -195,12 +195,12 @@ def clean_pics(pics, path, verbose):
             print 'Removing all associated sidecar files of %s.' % pic.filename
         for s in pic._sidecars:
             try:
-                os.remove(os.path.join(path, s.filename))
+                os.remove(os.path.join(path, s.path))
             except OSError:
                 # FIXME: shouldn't fail if file is not present (we just don't
                 #        care then), but it should fail if we can't remove the
                 #        file due to wrong permissions.
-                print 'Error: Unable to remove sidecar file %s.' % s.filename
+                print 'Error: Unable to remove sidecar file %s.' % s.path
                 sys.exit(1)
         pic._sidecars = []
     return pics
@@ -227,8 +227,8 @@ def delete_pics(selection, pics, path, verbose):
         try:
             pics.remove(pic)
             os.remove(os.path.join(path, pic.filename))
-        except KeyError, OSError:
-            print 'Error: Unable to remove %s.' % s.path
+        except (KeyError, OSError):
+            print 'Error: Unable to remove %s.' % os.path.join(path, pic.filename)
             sys.exit(1)    
     return pics
     
@@ -246,7 +246,6 @@ def delete_tree(root):
         
 
 def show_dir(pics, path, verbose):
-    import time
     if verbose:
         print 'Starting image viewer QIV...'
     qivCtrl = QivController('qiv', ['-m', 't'], pics, path)
@@ -256,14 +255,15 @@ def show_dir(pics, path, verbose):
         print 'QIV exited.'
     # TODO: QivController should return a list of Picture references instead of
     #       a list of thumbnail files in trash (path2pic within QivController?)
-    trashContent = [path2pic(pic_path, pics) for pic_path in qivCtrl.getTrashContent()]
+    trashContent = [path2pic(os.path.join(config.THUMB_SIDECAR_DIR, pic_path), pics) for pic_path in qivCtrl.getTrashContent()]
     trashPath = qivCtrl.getTrashPath()
     if trashContent:
         print 'Deleted pictures:'
         for pic in trashContent:
             print '  %s' % pic.filename
             # move deleted thumbnails back into original directory
-            os.rename(os.path.join(trashPath, pic.thumbnail), os.path.join(path, pic.thumbnail))
+            path_in_trash = os.path.join(trashPath, os.path.basename(pic.thumbnail))
+            os.rename(path_in_trash, os.path.join(path, pic.thumbnail))
         os.rmdir(trashPath)
         delChoice = raw_input('Do you want to permanently delete above pictures [yN]: ')
         if delChoice == 'y' or delChoice == 'Y':
@@ -328,7 +328,7 @@ def clone_dir(pics, src_path, dest_path, thumbs, link=False):
     for pic in pics:
         # FIXME: which thumbnail to copy? Now only last thumbnail is copied
         if thumbs:
-            fnames = [pic.get_thumbnails()[-1].filename]
+            fnames = [pic.get_thumbnails()[-1].path]
         else:
             fnames = pic.get_filenames()
         for fname in fnames:
@@ -526,7 +526,6 @@ def main():
     
 
 if __name__ == "__main__":
-    import sys
     try:
         main()
     except KeyboardInterrupt:

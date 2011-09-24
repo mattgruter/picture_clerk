@@ -18,6 +18,8 @@ import os
 import time
 import fnmatch
 
+import config
+
 class QivController(threading.Thread):
     def __init__(self, bin, opts, pics, path):
         threading.Thread.__init__(self)
@@ -51,7 +53,7 @@ class QivController(threading.Thread):
 class QivTrashMonitor(threading.Thread):
     def __init__(self, path):
         threading.Thread.__init__(self)
-        self.path = os.path.join(path, '.qiv-trash')
+        self.path = os.path.join(path, config.THUMB_SIDECAR_DIR, '.qiv-trash')
         self.content = set([])
         self.contentLock = threading.Lock()
         
