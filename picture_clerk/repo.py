@@ -23,13 +23,13 @@ class Repo(object):
     """
     PictureClerk repository
     """
-    def __init__(self):
-        self.config = None
-        self.index = set()
+    def __init__(self, config=None, index=set()):
+        self.config = config
+        self.index = index
         
     
     def __repr__(self):
-        return "Repo()"
+        return "Repo(%s, %s)" % (self.config, self.index)
     
     
     def __str__(self):
