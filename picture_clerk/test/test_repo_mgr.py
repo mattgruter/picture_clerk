@@ -12,7 +12,7 @@ import connector
 import repo
 import config
 
-from repo_factory import RepoFactory
+from repo_mgr import RepoMgr
 
 
 @mock.patch('repo.Repo')
@@ -25,11 +25,11 @@ class Test(unittest.TestCase):
 
     def test_init_dir(self, MockRepo):
         """
-        RepoFactory.init_dir should instantiate a Repo object (return value) and
+        RepoMgr.init_dir should instantiate a Repo object (return value) and
         call its init_repo method.
         """
         instance = MockRepo.return_value
-        result = RepoFactory.init_dir(self.connector)
+        result = RepoMgr.init_dir(self.connector)
         fh = self.connector.open.return_value
         # check that correct repo instance is returned
         self.assertEqual(instance, result)
@@ -48,11 +48,11 @@ class Test(unittest.TestCase):
     
     def test_create_and_init_dir(self, MockRepo):
         """
-        RepoFactory.create_and_init_dir should call Connector.mkdir, instantiate
+        RepoMgr.create_and_init_dir should call Connector.mkdir, instantiate
         a Repo object (return value) and call its init_repo method.
         """
         instance = MockRepo.return_value
-        result = RepoFactory.init_dir(self.connector, create_dir=True)
+        result = RepoMgr.init_dir(self.connector, create_dir=True)
         # check that correct repo instance is returned
         self.assertEqual(instance, result)
         # check that repo dir is created
@@ -60,12 +60,12 @@ class Test(unittest.TestCase):
         
     def test_disconnect_after_fail(self, MockRepo):
         """
-        RepoFactory.init_dir should disconnect if exception occurs.
+        RepoMgr.init_dir should disconnect if exception occurs.
         """
         self.connector.mkdir.side_effect = Exception("test exception")
         # check that mock exception is re-raised
         self.assertRaises(Exception,
-                          RepoFactory.init_dir, self.connector)
+                          RepoMgr.init_dir, self.connector)
         # check that disconnect method is called
         self.connector.disconnect.assert_called_once_with()
  
@@ -109,7 +109,7 @@ class CloneTest(unittest.TestCase):
         src_repo.load_config = mock.Mock()
         
         # clone source repo
-        dest_repo = RepoFactory.clone_repo(src_repo, self.src_connector,
+        dest_repo = RepoMgr.clone_repo(src_repo, self.src_connector,
                                            self.dest_connector)
         
         self.assertIsInstance(dest_repo, repo.Repo)

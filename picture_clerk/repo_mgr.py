@@ -12,7 +12,7 @@ import repo
 import config
 
 
-class RepoFactory(object):
+class RepoMgr(object):
     """
     Repo factory methods
     """
@@ -45,7 +45,7 @@ class RepoFactory(object):
             
             # create default repo config if not supplied
             if not repo_config:
-                repo_config = RepoFactory.create_default_repo_config()
+                repo_config = RepoMgr.create_default_repo_config()
 
             # create Repo instance                
             r = repo.Repo(repo_config, index)
@@ -118,7 +118,7 @@ class RepoFactory(object):
         
             dest_config = copy.copy(src_repo.config)
             dest_index = copy.deepcopy(src_repo.index)
-            dest_repo = RepoFactory.init_dir(dest_connector,
+            dest_repo = RepoMgr.init_dir(dest_connector,
                                              create_dir=True,
                                              repo_config=dest_config,
                                              index=dest_index)
