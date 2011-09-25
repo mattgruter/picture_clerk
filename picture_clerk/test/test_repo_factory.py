@@ -15,7 +15,7 @@ import config
 from repo_factory import RepoFactory
 
 
-@mock.patch('repo.Repo', spec_set=True)
+@mock.patch('repo.Repo')
 class Test(unittest.TestCase):
     def setUp(self):
         self.connector = mock.Mock(spec_set=connector.Connector)
@@ -38,7 +38,6 @@ class Test(unittest.TestCase):
         # check that pic dir is created
         self.connector.mkdir.assert_called_once_with(config.PIC_DIR)
         # check that default config is created and written to file
-        result.create_default_config.assert_called_once_with()
         self.assertIn(((config.CONFIG_FILE, 'wb'), {}),
                         self.connector.open.call_args_list)
         result.write_config.assert_called_once_with(fh)
@@ -71,55 +70,54 @@ class Test(unittest.TestCase):
         self.connector.disconnect.assert_called_once_with()
  
  
+class MockPic(object):
+    def __init__(self, pic):
+        self.pic = pic
+    def __eq__(self, other):
+        return self.pic == other.pic
+    def __repr__(self):
+        return "MockPic(%s)" % self.pic
+    
+class MockConfig(object):
+    def __init__(self, conf):
+        self.conf = conf
+    def __eq__(self, other):
+        return self.conf == other.conf
+    def __repr__(self):
+        return "MockConfig(%s)" % self.pic
+    def write(self, fh):
+        pass
+
+@mock.patch('repo.Repo.write_index')
 class CloneTest(unittest.TestCase):
     def setUp(self):
-        # mock connector for the source repo
-        self.src_connector = mock.Mock()
-#        self.src_connector.open.return_value = mock.MagicMock()
-        
-        # mock connector for the destination repo
-        self.dest_connector =  mock.Mock()
-#        self.dest_connector.open.return_value = mock.MagicMock()
-        mock_open = self.dest_connector.open
-        mock_open.return_value = mock.Mock()
-        mock_open.return_value.__enter__ = mock.Mock()
-        mock_open.return_value.__exit__ = mock.Mock()
+        # mock connector for source and destination repos
+        self.src_connector = mock.Mock(spec_set=connector.Connector)
+        self.dest_connector = mock.Mock(spec_set=connector.Connector)
 
     def tearDown(self):
         pass
-           
-    def test_clone_repo(self):
-        """
-        RepoFactory.clone_repo
-        """
-        # create source repo with mocked config, index and load_ methods
-        src_repo = repo.Repo()
-        src_repo.load_config = lambda x: None
-        src_repo.config = mock.Mock()
-        src_repo.load_index = lambda x: None
-        class MockPic(object):
-            def __init__(self, pic):
-                self.pic = pic
-            def __eq__(self, other):
-                return self.pic == other.pic
-            def __repr__(self):
-                return "MockPic(%)" % self.pic
+        
+    def test_clone_repo(self, mock_write_index):
+        # setup source repo
+        src_config = MockConfig("mock config")
         pic = MockPic('mock picture')
         pic.get_filenames = mock.Mock(return_value=['filename1', 'filename2'])
-        src_repo.index = [pic]
+        src_index = [pic]
+        src_repo = repo.Repo(src_config, src_index)
+        src_repo.load_config = mock.Mock()
+        src_repo.load_config = mock.Mock()
         
-        # execute method under test
+        # clone source repo
         dest_repo = RepoFactory.clone_repo(src_repo, self.src_connector,
                                            self.dest_connector)
         
-        # compare all attributes of src_repo and dest_repo 
-        for key, value in src_repo.__dict__.items():
-            if key not in ['load_config', 'load_index']:
-                self.assertEqual(dest_repo.__dict__[key], value,
-                                 "%s not equal" % key)
-        
-        # TODO: compare that all picture files are copied
-        #self.repo.check_index()
+        self.assertIsInstance(dest_repo, repo.Repo)
+        # check that index & config are equal copies
+        self.assertEqual(src_repo.config, dest_repo.config)
+        self.assertIsNot(src_repo.config, dest_repo.config)
+        self.assertEqual(src_repo.index, dest_repo.index)
+        self.assertIsNot(src_repo.index, dest_repo.index)
         
 
 if __name__ == "__main__":

@@ -5,9 +5,11 @@ Created on 2011/08/09
 @copyright: Copyright (c) 2011 Matthias Grueter
 @license: GPL
 """
+import ConfigParser
+import copy
+
 import repo
 import config
-import copy
 
 
 class RepoFactory(object):
@@ -16,14 +18,18 @@ class RepoFactory(object):
     """
 
     @staticmethod
-    def init_dir(connector, create_dir=False, repo_config=None, repo_index=None):
+    def init_dir(connector, create_dir=False, repo_config=None, index=set()):
         """
         Initialize the repository directory and return a Repo instance
         
         @param connector: connector to the directory to be initialized
         @type connector: connetor.Connector
-        @param create_dir: set True if repo dir should be created (default False)
+        @param create_dir: set True if repo dir should be created (def.: False)
         @type create_dir: bool
+        @parm repo_config: configuration of Repo to be created (default None)
+        @type repo_config: ConfigParser.ConfigParser
+        @parm index: index of Repo to be created (default: empty set)
+        @type index: list
         @return: the initialize Repo instance
         @rtype: repo.Repo
         """
@@ -37,18 +43,14 @@ class RepoFactory(object):
             # create necessary directories
             connector.mkdir(config.PIC_DIR)
             
-            # create Repo instance
-            r = repo.Repo()
-            
-            if repo_config:
-                r.config = repo_config
-            else:
-                # create default config and write it to file
-                r.create_default_config()
-            
-            if repo_index:
-                r.index = repo_index
-            
+            # create default repo config if not supplied
+            if not repo_config:
+                repo_config = RepoFactory.create_default_repo_config()
+
+            # create Repo instance                
+            r = repo.Repo(repo_config, index)
+
+            # write repo_config to file
             #with connector.open(config_file, 'wb') as config_fh:    
             config_fh = connector.open(config.CONFIG_FILE, 'wb')
             try:
@@ -56,6 +58,7 @@ class RepoFactory(object):
             finally:
                 config_fh.close()
             
+            # write index to file
             #with connector.open(config.INDEX_FILE, 'wb') as index_fh:
             index_fh = connector.open(config.INDEX_FILE, 'wb')
             try:
@@ -68,6 +71,18 @@ class RepoFactory(object):
             raise
        
         return r
+    
+    
+    @staticmethod
+    def create_default_repo_config():
+        """
+        Create ConfigParser instance with default configuration
+        """
+        cp = ConfigParser.ConfigParser()
+        cp.add_section("core")
+        cp.set("core", "index_file", config.INDEX_FILE)
+        cp.set("core", "index_format_version", config.INDEX_FORMAT_VERSION)
+        return cp
     
                 
     @staticmethod
@@ -106,11 +121,14 @@ class RepoFactory(object):
             dest_repo = RepoFactory.init_dir(dest_connector,
                                              create_dir=True,
                                              repo_config=dest_config,
-                                             repo_index=dest_index)
+                                             index=dest_index)
             
+            # @FIXME: dest_connector will be connected/disconnected many times
+            #         during cloning: once by init_dir and once for each
+            #         file to copy --> not very efficient!
             for picture in src_repo.index:
                 for fname in picture.get_filenames():
-                    src_repo.connector.copy(fname, dest_connector, dest=fname)
+                    src_connector.copy(fname, dest_connector, dest=fname)
                     
         finally:   
             src_connector.disconnect()

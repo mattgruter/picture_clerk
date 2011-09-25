@@ -12,8 +12,6 @@ except ImportError:
 
 import ConfigParser
 
-import config
-
 
 class IndexParsingError(Exception):
     pass
@@ -34,17 +32,6 @@ class Repo(object):
     
     def __str__(self):
         return repr(self)
-    
-
-    def create_default_config(self):
-        """
-        Create ConfigParser instance with default configuration
-        """
-        self.config = ConfigParser.ConfigParser()
-        self.config.add_section("core")
-        self.config.set("core", "index_file", config.INDEX_FILE)
-        self.config.set("core", "index_format_version",
-                        config.INDEX_FORMAT_VERSION)
             
     
     def load_config(self, config_fh):
