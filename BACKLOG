@@ -10,3 +10,10 @@
   				 undo_action='del(...)')
   def add(self, picture):
   	<...> 
+
+
+
+* Possibility to split & merge repositories
+
+
+* Keep track of deleted pictures, so that clones can be updated
