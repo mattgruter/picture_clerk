@@ -11,9 +11,11 @@
   def add(self, picture):
   	<...> 
 
-
-
 * Possibility to split & merge repositories
 
-
 * Keep track of deleted pictures, so that clones can be updated
+
+* use virtualenv to work in a isolated python environment (http://iamzed.com/2009/05/07/a-primer-on-virtualenv/, http://www.mahdiyusuf.com/post/5282169518/beginners-guide-easy-install-pip-and-virtualenv)
+
+* package picture_clerk with pip (http://www.pip-installer.org/en/latest/)
+or checkout packaging in python3 (see ReadItLater list).
