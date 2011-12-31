@@ -27,6 +27,12 @@ class Repo(object):
     def __str__(self):
         return repr(self)
     
+    def __eq__(self, other):
+        return self.index == other.index
+        
+    def __ne__(self, other):
+        return not self.__eq__(other)
+    
     def add_picture(self, pic):
         key = pic.filename
         if key in self.index:

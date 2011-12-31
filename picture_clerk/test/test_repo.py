@@ -26,6 +26,22 @@ class ObjectCreationTest(unittest.TestCase):
         self.assertIs(r.index, mock_index)
      
 
+class EqualityTest(unittest.TestCase):
+    def setUp(self):
+        self.index = ['pic1', 'pic2', 'pic3']
+        self.instance = Repo(self.index)
+
+    def test_equal(self):
+        other = Repo(self.index)
+        self.assertTrue(self.instance == other)
+        self.assertFalse(self.instance != other)
+        
+    def test_notequal(self):
+        other = Repo([])
+        self.assertTrue(self.instance != other)
+        self.assertFalse(self.instance == other)
+
+
 class IndexTest(unittest.TestCase):
     def setUp(self):
         self.mock_pic = mock.Mock()
