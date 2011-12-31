@@ -25,34 +25,34 @@ class RepoHandler(object):
     """
     RepoHandler
     """
-    def __init__(self, repo):
+    def __init__(self, repo, config=None):
         self.repo = repo
+        self.config = config
 
     def load_config(self, config_fh):
         """
-        Load repo configuration from supplied file handle.
+        Load configuration from supplied file handle.
         
         @param config_fh: readable file handle pointing to the config file
         @type config_fh: file
         """
         # @TODO: check out ConfigParser's handling of defaults
-        # @TODO: make repo.config a dict, convert to to ConfigParser when needed
-        self.repo.config = ConfigParser.ConfigParser()
-        self.repo.config.readfp(config_fh)
+        # @TODO: make config a dict, convert to to ConfigParser when needed
+        self.config = ConfigParser.ConfigParser()
+        self.config.readfp(config_fh)
 
     def save_config(self, config_fh):
         """
-        Write repo configuration to supplied file handle
+        Write configuration to supplied file handle
         
         @param config_fh: writable file handle pointing to the config file
         @type config_fh: file
         """
-        #@TODO: make repo.config a dict, convert to to ConfigParser when needed
-        self.repo.config.write(config_fh)
+        self.config.write(config_fh)
 
     def load_index(self, index_fh):
         """
-        Load (unpickle) picture index from supplied file handle.
+        Load (unpickle) repo's picture index from supplied file handle.
         
         @param index_fh: readable file handle pointing to the index file
         @type index_fh: file
@@ -65,7 +65,7 @@ class RepoHandler(object):
                  
     def save_index(self, index_fh):
         """
-        Write repo's picture index to index file
+        Write (dump) repo's picture index to supplied file handle
         
         @param index_fh: writable file handle pointing to the index file
         @type index_fh: file
@@ -172,7 +172,7 @@ class RepoHandler(object):
             finally:
                 config_fh.close()
         
-            dest_rh.repo.config = copy.deepcopy(src_rh.repo.config)
+            dest_rh.config = copy.deepcopy(src_rh.config)
             dest_rh.repo.index = copy.deepcopy(src_rh.repo.index)
             RepoHandler.init_dir(dest_rh, dest_connector, create_dir=True)
             

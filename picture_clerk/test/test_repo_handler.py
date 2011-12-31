@@ -15,7 +15,6 @@ import repo
 import config
 
 from repo_handler import RepoHandler, IndexParsingError
-from repo import Repo
 
 class IndexTest(unittest.TestCase):
     def setUp(self):
@@ -57,8 +56,7 @@ class IndexTest(unittest.TestCase):
 
 class ConfigTest(unittest.TestCase):
     def setUp(self):
-        self.repo = mock.Mock()
-        self.rh = RepoHandler(self.repo)
+        self.rh = RepoHandler(repo=mock.Mock())
         self.cp = ConfigParser.SafeConfigParser()
         self.cp.add_section("test")
         self.option1 = "test option1"
@@ -80,17 +78,17 @@ class ConfigTest(unittest.TestCase):
         supplied file handle."""
         self.rh.load_config(self.config_fh)
         sections = self.cp.sections()
-        repo_sections = self.repo.config.sections()
-        self.assertEqual(repo_sections, sections,
+        rh_sections = self.rh.config.sections()
+        self.assertEqual(rh_sections, sections,
             msg="config sections should match " +
-                "%s != %s" % (repo_sections, sections))
+                "%s != %s" % (rh_sections, sections))
         for section in sections:
             options = self.cp.options(section)
-            repo_options = self.repo.config.options(section)
-            self.assertEqual(repo_options, options,
+            rh_options = self.rh.config.options(section)
+            self.assertEqual(rh_options, options,
                 msg="options in section '%s' should match: " % section +
-                    "%s != %s" % (repo_options, options))
-        self.assertIsNot(self.cp, self.repo.config)
+                    "%s != %s" % (rh_options, options))
+        self.assertIsNot(self.cp, self.rh.config)
         
     def test_save_config(self):
         """Config file dump from RepoHandler.save_config should match dump
@@ -99,7 +97,7 @@ class ConfigTest(unittest.TestCase):
         config_buf = self.config_fh.readlines()
         # test dump
         test_config_fh = StringIO.StringIO()        
-        self.repo.config = self.cp
+        self.rh.config = self.cp
         self.rh.save_config(test_config_fh)
         test_config_fh.seek(0)
         test_config_buf = test_config_fh.readlines()
@@ -196,7 +194,7 @@ class CloneTest(unittest.TestCase):
     def test_clone_repo(self):
         # setup source repo's config
         test_config = MockConfig("mock config")
-        self.src_rh.repo.config = test_config
+        self.src_rh.config = test_config
 
         # setup source repo's index
         pic = MockPic('mock picture')
@@ -207,11 +205,11 @@ class CloneTest(unittest.TestCase):
         RepoHandler.clone_repo(self.src_rh, self.src_connector,
                                self.dest_rh, self.dest_connector)
         
-        # dest repo's config should be a exact copy of src repo's config
-        self.assertEqual(self.dest_rh.repo.config, test_config)
-        self.assertIsNot(self.dest_rh.repo.config, test_config)
+        # cloned config should be a exact copy of src config
+        self.assertEqual(self.dest_rh.config, test_config)
+        self.assertIsNot(self.dest_rh.config, test_config)
         
-        # dest repo's index should be a exact copy of src repo's index
+        # cloned repo's index should be a exact copy of src repo's index
         self.assertEqual(self.dest_rh.repo.index, test_index)
         self.assertIsNot(self.dest_rh.repo.index, test_index)
         
