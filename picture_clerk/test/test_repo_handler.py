@@ -209,9 +209,10 @@ class CloneTest(unittest.TestCase):
         self.assertEqual(self.dest_rh.config, test_config)
         self.assertIsNot(self.dest_rh.config, test_config)
         
-        # cloned repo's index should be a exact copy of src repo's index
-        self.assertEqual(self.dest_rh.repo.index, test_index)
-        self.assertIsNot(self.dest_rh.repo.index, test_index)
+        # cloned repo should be an exact copy of src repo
+        self.assertEqual(self.dest_rh.repo, self.src_rh.repo)
+        # cloned repo's index should not be reference to src repo's index
+        self.assertIsNot(self.dest_rh.repo.index, self.src_rh.repo.index)
         
         
 if __name__ == "__main__":
