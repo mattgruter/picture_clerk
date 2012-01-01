@@ -17,7 +17,7 @@ class Repo(object):
     """
     PictureClerk repository
     """
-    def __init__(self, index):
+    def __init__(self, index=dict()):
         self.index = index
         self.config = None
         

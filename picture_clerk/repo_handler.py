@@ -76,7 +76,7 @@ class RepoHandler(object):
 
     
     @staticmethod
-    def _create_default_repo_config():
+    def create_default_config():
         """
         Create ConfigParser instance with default configuration
         """
@@ -116,8 +116,8 @@ class RepoHandler(object):
             # create necessary directories
             connector.mkdir(config.PIC_DIR)
 
-            # write repo_config to file
-            #with connector.open(config_file, 'wb') as config_fh:    
+            # write config to file
+            #with connector.open(config_file, 'wb') as config_fh:
             config_fh = connector.open(config.CONFIG_FILE, 'wb')
             try:
                 rh.save_config(config_fh)
