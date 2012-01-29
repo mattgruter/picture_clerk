@@ -17,6 +17,7 @@ import fnmatch
 import time
 import shutil
 import paramiko
+import urlparse
 
 try:
     import cPickle as pickle
@@ -29,7 +30,6 @@ from pipeline import *
 from picture import *
 from config import *
 from qivcontrol import *
-from path import *
 
 
 class ProgressBar:
@@ -298,30 +298,30 @@ def update_dir(pics, path, verbose):
     raise NotImplementedError
 
 
-def clone_dir(pics, src_path, dest_path, thumbs, link=False):
+def clone_dir(pics, src_url, dest_url, thumbs, link=False):
 
     # TODO: handle remote dest_paths (how to init repo remotly?)
     # TODO: save path of origin (src_path)
     # TODO: draw progress bar
 
-    if dest_path.isremote:
+    if dest_url.scheme and dest_url.scheme != "file":
         print "Cloning to remote paths not supported yet."
         raise NotImplementedError
         
-    init_repo(dest_path.path)
+    init_repo(dest_url.path)
 
-    if src_path.islocal:
+    if not src_url.scheme or src_url.scheme == "file":
         if link:
             # create unix symlinks if linksonly is true
             copy = os.symlink
         else:
             # use shutil copy (aka 'cp -p' to copy files)
             copy = shutil.copy2
-    elif src_path.protocol == "ssh":
+    elif src_url.scheme == "ssh":
             src_ssh = paramiko.SSHClient()
             # TODO: make sure that this is portable
             src_ssh.load_host_keys(os.path.expanduser("~/.ssh/known_hosts"))
-            src_ssh.connect(src_path.hostname, username=src_path.username)
+            src_ssh.connect(src_url.hostname, username=src_url.username)
             src_sftp = src_ssh.open_sftp()
             copy = src_sftp.get
     
@@ -332,39 +332,39 @@ def clone_dir(pics, src_path, dest_path, thumbs, link=False):
         else:
             fnames = pic.get_filenames()
         for fname in fnames:
-            src = os.path.join(src_path.path, fname)
-            dest = os.path.join(dest_path.path, fname)
+            src = os.path.join(src_url.path, fname)
+            dest = os.path.join(dest_url.path, fname)
             copy(src, dest)
             
-    if src_path.protocol == "ssh":
+    if src_url.scheme == "ssh":
         src_sftp.close()
         src_ssh.close()
 
 
-def load_index(path):
+def load_index(url):
     """
     Retrieve index of pictures from file.
     """
     
     # TODO: use different index format that is fully protable and possibly
     #       text based and human readable (i.e. json, xml?)
-    index_path = os.path.join(path.path, config.INDEX_FILE)
+    index_path = os.path.join(url.path, config.INDEX_FILE)
     mode = 'rb'
-    if path.islocal:
+    if not url.scheme or url.scheme == "file":
         try:
             index_fh = open(index_path, mode)
         except IOError as err:
             print "Error accessing %s: %s" % (index_path, err)
             sys.exit(2)
-    elif path.protocol == "ssh":
+    elif url.scheme == "ssh":
             ssh = paramiko.SSHClient()
             # TODO: make sure that this is portable
             ssh.load_host_keys(os.path.expanduser("~/.ssh/known_hosts"))
-            ssh.connect(path.hostname, username=path.username)
+            ssh.connect(url.hostname, username=url.username)
             sftp = ssh.open_sftp()
             index_fh = sftp.file(index_path, mode)
     else:
-        print "%s:// paths are not supported." % path.protocol
+        print "%s:// paths are not supported." % url.scheme
         sys.exit(2)
 #    logging.debug("Loading from index file %s" % index_path)
     try:
@@ -375,35 +375,35 @@ def load_index(path):
         # TODO: this finally clause should come from a more global try statement
         #       that covers the block from where index_fh is created
         index_fh.close()
-        if path.protocol == "ssh":
+        if url.scheme == "ssh":
             sftp.close()
             ssh.close()
 
     return index
     
     
-def write_index(path, index):
+def write_index(url, index):
     """
     Write index of pictures to file.
     """
     
-    index_path = os.path.join(path.path, config.INDEX_FILE)
+    index_path = os.path.join(url.path, config.INDEX_FILE)
     mode = 'wb'
-    if path.islocal:
+    if not url.scheme or url.scheme == "file":
         try:
             index_fh = open(index_path, mode)
         except IOError as err:
             print "Error accessing %s: %s" % (index_path, err)
             sys.exit(2)
-    elif path.protocol == "ssh":
+    elif url.scheme == "ssh":
             ssh = paramiko.SSHClient()
             # TODO: make sure that this is portable
             ssh.load_host_keys(os.path.expanduser("~/.ssh/known_hosts"))
-            ssh.connect(path.hostname, username=path.username)
+            ssh.connect(url.hostname, username=url.username)
             sftp = ssh.open_sftp()
             index_fh = sftp.file(index_path, mode)
     else:
-        print "%s:// paths are not supported." % path.protocol
+        print "%s:// paths are not supported." % url.scheme
         sys.exit(2)
 #    logging.debug("Writing to index file %s" % index_path)
     try:
@@ -414,7 +414,7 @@ def write_index(path, index):
         # TODO: this finally clause should come from a more global try statement
         #       that covers the block from where index_fh is created
         index_fh.close()
-        if path.protocol == "ssh":
+        if url.scheme == "ssh":
             sftp.close()
             ssh.close()
 
@@ -464,62 +464,68 @@ def main():
     if not args:
         parser.error("no command given")
 
-    path = Path.fromPath(opt.path)
-    if path.islocal and not path.exists():
-        parser.error("invalid directory: %s" % path)
+#    path = Path.fromPath(opt.path)
+    url = urlparse.urlparse('.')
+    if (not url.scheme or url.scheme == "file") and not os.path.exists(url.path):
+        parser.error("invalid directory: %s" % url.path)
+#
+#
+#    if path.islocal and not path.exists():
+#        parser.error("invalid directory: %s" % path)
         
     # first argument is the command
     cmd = args.pop(0)
 
     if cmd == "import":
         # TODO: handle remote paths
-        pics = import_dir(path.path, opt.verbose)
-        write_index(path, pics)
+        pics = import_dir(url.path, opt.verbose)
+        write_index(url, pics)
     elif cmd == "list":
-        pics = load_index(path)
+        pics = load_index(url)
         list_pics(pics, opt.verbose)
     elif cmd == "clean":
-        pics = load_index(path)
+        pics = load_index(url)
         # TODO: handle remote paths
-        clean_dir(pics, path.path, opt.verbose)
+        clean_dir(pics, url.path, opt.verbose)
     elif cmd == "show":
-        pics = load_index(path)
-        if path.isremote:
+        pics = load_index(url)
+        if url.scheme and url.scheme != "file":
             print "Only local repositories are supported for viewing."
             sys.exit(1)
-        new_pics = show_dir(pics, path.path, opt.verbose)
+        new_pics = show_dir(pics, url.path, opt.verbose)
         # TODO: only update index if new_pics is not the same as pics
-        write_index(path, new_pics)
+        write_index(url, new_pics)
     elif cmd == "checksums":
         # TODO: add this to 'list' command with a checksum flag
-        pics = load_index(path)
+        pics = load_index(url)
         list_checksums(pics, opt.verbose)
     elif cmd == "check":
-        pics = load_index(path)
+        pics = load_index(url)
         # TODO: handle remote paths
-        check_dir(pics, path.path, opt.verbose)
+        check_dir(pics, url.path, opt.verbose)
     elif cmd == "delete":
-        pics = load_index(path)
+        pics = load_index(url)
         files = args
         pics_to_remove = [path2pic(pic_path, pics) for pic_path in files]
         # TODO: handle remote paths
-        pics = delete_pics(pics_to_remove, pics, path.path, opt.verbose)            
-        write_index(path, pics)
+        pics = delete_pics(pics_to_remove, pics, url.path, opt.verbose)            
+        write_index(url, pics)
     elif cmd == "update":
         # FIXME: import is a special case of update
         # TODO: maybe call this command sync?
-        pics = load_index(path)
+        pics = load_index(url)
         # TODO: handle remote paths
         new_pics = update_dir(pics, opt.path, opt.verbose)
         # TODO: only update index if new_pics is not the same as pics
-        write_index(path, new_pics)
+        write_index(url, new_pics)
     elif cmd == "clone":
-        src_path = Path.fromPath(args.pop(0))
-        if src_path.islocal and not src_path.exists():
-            parser.error("invalid directory: %s" % src_path)
-        pics = load_index(src_path)
-        clone_dir(pics, src_path, path, opt.thumbs, opt.link)
-        write_index(path, pics)
+        src_url = urlparse.urlparse(args.pop(0))
+        if (not src_url.scheme or src_url.scheme == "file") \
+            and not os.path.exists(src_url.path):
+            parser.error("invalid directory: %s" % src_url.path)
+        pics = load_index(src_url)
+        clone_dir(pics, src_url, url, opt.thumbs, opt.link)
+        write_index(url, pics)
     else:
         parser.error("invalid argument: %s" % cmd)
 

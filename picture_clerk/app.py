@@ -10,10 +10,10 @@ Created on 2012/01/01
 import os
 import optparse
 import logging
+import urlparse
 
 import config
 
-from path import Path
 from local_connector import LocalConnector
 from repo import Repo
 from repo_handler import RepoHandler
@@ -126,8 +126,8 @@ class App(object):
 
     @staticmethod
     def main():
-        path = Path.fromPath('.')
-        connector = LocalConnector(path)
+        url = urlparse.urlparse('.')
+        connector = LocalConnector(url)
         app = App(connector)
         
         cmd, args, verbosity = app.parse_command_line()
