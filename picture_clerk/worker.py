@@ -83,9 +83,13 @@ class Worker(threading.Thread):
         
     def _init_logging(self):
         if self.logging:
-            _logfile = os.path.join(self.path, self.logdir, self.name + str(self.number) + '.log')
+            abs_logdir = os.path.join(self.path, self.logdir)
+            if not os.path.exists(abs_logdir):
+                os.mkdir(abs_logdir)
+            
+            _logfile = os.path.join(abs_logdir, self.name + str(self.number) + '.log')
             self.outlog_handle=open(_logfile, 'w', 0)   # unbuffered
-            _errfile = os.path.join(self.path, self.logdir, self.name + str(self.number) + '.err')
+            _errfile = os.path.join(abs_logdir, self.name + str(self.number) + '.err')
             self.errlog_handle=open(_errfile, 'w', 0)   # unbuffered
         else:
             self.outlog_handle = None
@@ -143,6 +147,11 @@ class ThumbWorker(Worker):
     name = 'ThumbWorker'
     
     def _work(self, picture, jobnr):
+        
+        # create thumbnail subdir if it doesn't already exist
+        #@fixme: this isn't thread-safe!
+        if not os.path.exists(config.THUMB_SIDECAR_DIR):
+            os.mkdir(config.THUMB_SIDECAR_DIR)
         
         metadata = pyexiv2.ImageMetadata(picture.filename)
         metadata.read()
@@ -267,6 +276,11 @@ class HashDigestWorker(Worker):
         digest = hashlib.sha1(buf).hexdigest()
         picture.checksum = digest
         if config.SHA1_SIDECAR_ENABLED:
+            # create sha1 subdir if it doesn't already exist
+            #@fixme: this isn't thread-safe!
+            if not os.path.exists(config.SHA1_SIDECAR_DIR):
+                os.mkdir(config.SHA1_SIDECAR_DIR)
+            
             # write digest to a sidecar file     
             (hashfile_path, contentType) = self._compile_sidecar_path(picture)
             hashfile_path = os.path.join(self.path, hashfile_path)

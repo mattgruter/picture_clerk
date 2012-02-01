@@ -117,11 +117,7 @@ class RepoHandler(object):
 
             # create necessary directories
             connector.mkdir(config.PIC_DIR)
-            #@todo: these 3 subdirs (log, thumb, sha1) should be created on demand
-            connector.mkdir(config.LOGDIR)
-            connector.mkdir(config.THUMB_SIDECAR_DIR)
-            connector.mkdir(config.SHA1_SIDECAR_DIR)
-
+            
             # write config to file
             #with connector.open(config_file, 'wb') as config_fh:
             config_fh = connector.open(config.CONFIG_FILE, 'wb')
