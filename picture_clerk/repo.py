@@ -65,7 +65,7 @@ class Repo(object):
         return self.index.itervalues()
         
     def get_pictures(self):
-        return [self.get_pictures_iter()]
+        return list(self.get_pictures_iter())
         
     def get_picture_by_filename(self, filename):
         logging.debug("Fetching %s from repository", filename)
