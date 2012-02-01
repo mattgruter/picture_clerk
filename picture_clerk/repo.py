@@ -6,11 +6,25 @@ Created on 2011/08/09
 @license: GPL
 """
 
+import logging
+
 class PictureAlreadyIndexedError(Exception):
-    pass
+    def __init__(self, pic):
+        Exception.__init__(self, pic)
+        self.pic = pic
+    def __str__(self):
+        return "%s already in index" % self.pic
+    def __repr__(self):
+        return "PictureAlreadyIndexedError(%s)" % self.pic 
 
 class PictureNotIndexedError(KeyError):
-    pass
+    def __init__(self, pic):
+        KeyError.__init__(self, pic)
+        self.pic = pic
+    def __str__(self):
+        return "%s not in index" % self.pic
+    def __repr__(self):
+        return "PictureNotIndexedError(%s)" % self.pic 
 
 
 class Repo(object):
@@ -36,17 +50,33 @@ class Repo(object):
     def add_picture(self, pic):
         key = pic.filename
         if key in self.index:
-            raise PictureAlreadyIndexedError()
+            raise PictureAlreadyIndexedError(pic.filename)
+        logging.debug("Adding %s to repository", pic.filename)
         self.index[key] = pic
         
+    def add_pictures(self, pics):
+        for pic in pics:
+            try:
+                self.add_picture(pic)
+            except PictureAlreadyIndexedError as paie:
+                logging.debug("%s already in index", paie.pic)
+        
+    def get_pictures_iter(self):
+        return self.index.itervalues()
+        
+    def get_pictures(self):
+        return [self.get_pictures_iter()]
+        
     def get_picture_by_filename(self, filename):
+        logging.debug("Fetching %s from repository", filename)
         try:
             return self.index[filename]
         except KeyError:
-            raise PictureNotIndexedError()
+            raise PictureNotIndexedError(filename)
     
     def update_picture(self, pic):
         key = pic.filename
         if key not in self.index:
-            raise PictureNotIndexedError()
+            raise PictureNotIndexedError(pic.filename)
+        logging.debug("Updating %s in repository", pic.filename)
         self.index[key] = pic 

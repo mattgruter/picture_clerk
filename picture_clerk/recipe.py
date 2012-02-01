@@ -10,6 +10,7 @@ __date__ = "$Date: 2008/11/18 $"
 __copyright__ = "Copyright (c) 2008 Matthias Grueter"
 __license__ = "GPL"
 
+import worker
 
 class Recipe():
     """
@@ -35,5 +36,10 @@ class Recipe():
         
     def __repr__(self):
         return str(self)
+    
+    @classmethod
+    def fromString(cls, list_as_string):
+        return Recipe([eval(s.strip(), worker.__dict__)
+                       for s in list_as_string.split(',')])
 
     

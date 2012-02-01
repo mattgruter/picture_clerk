@@ -84,6 +84,8 @@ class RepoHandler(object):
         cp.add_section("index")
         cp.set("index", "index_file", config.INDEX_FILE)
         cp.set("index", "index_format_version", str(config.INDEX_FORMAT_VERSION))
+        cp.add_section("recipes")
+        cp.set("recipes", "default", config.DEFAULT_RECIPE)
         return cp
 
 
@@ -115,6 +117,10 @@ class RepoHandler(object):
 
             # create necessary directories
             connector.mkdir(config.PIC_DIR)
+            #@todo: these 3 subdirs (log, thumb, sha1) should be created on demand
+            connector.mkdir(config.LOGDIR)
+            connector.mkdir(config.THUMB_SIDECAR_DIR)
+            connector.mkdir(config.SHA1_SIDECAR_DIR)
 
             # write config to file
             #with connector.open(config_file, 'wb') as config_fh:

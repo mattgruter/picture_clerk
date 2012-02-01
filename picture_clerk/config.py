@@ -58,3 +58,6 @@ THUMB_COPY_METADATA = True
 
 # XMP metadata sidecar file destination
 XMP_SIDECAR_DIR = os.path.join(PIC_DIR, "xmp")
+
+# default processing instructions/recipe used if none defined at command line
+DEFAULT_RECIPE = "HashDigestWorker, ThumbWorker, AutorotWorker, MetadataWorker"
