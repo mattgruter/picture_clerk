@@ -12,6 +12,7 @@ __license__ = "GPL"
 
 
 import os.path
+import logging
 
 
 # number of workers in each stage by default
@@ -44,9 +45,14 @@ INDEX_FILE = os.path.join(PIC_DIR, "index")
 # index format version
 INDEX_FORMAT_VERSION = 1
 
-# logging on/off
+# worker logging on/off
 LOGGING = True
 LOGDIR = os.path.join(PIC_DIR, "log")
+
+# repo logging
+REPO_LOG_FILE = os.path.join(PIC_DIR, "log.txt")
+REPO_LOG_LEVEL = logging.DEBUG
+REPO_LOG_FORMAT = '%(asctime)s %(levelname)s %(message)s'
 
 # SHA1 sidecar files on/off
 SHA1_SIDECAR_ENABLED = True

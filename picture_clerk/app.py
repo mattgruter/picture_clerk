@@ -21,6 +21,7 @@ from repo_handler import RepoHandler
 from picture import Picture
 from pipeline import Pipeline
 
+logger = logging.getLogger('pic.app')
 
 class App(object):
     """PictureClerk's command line interface."""
@@ -53,11 +54,12 @@ class App(object):
             self.repo_handler.save_index(index_fh)
 
     def init(self):
-        logging.debug("Initializing repository")
         self.repo = Repo()
         self.repo_handler = RepoHandler(self.repo,
                                         RepoHandler.create_default_config())
         RepoHandler.init_dir(self.repo_handler, self.connector)
+        self.init_repo_logging(config.REPO_LOG_FILE, config.REPO_LOG_FORMAT)
+        logging.info("Initialized empty PictureClerk repository")
 
     def add_pics(self, paths, process_enabled, process_recipe=None):
         """Add pictures to repository.
@@ -72,13 +74,14 @@ class App(object):
         self.repo_handler = RepoHandler(self.repo)
         self._load_config_from_disk()
         self._load_index_from_disk()
+        self.init_repo_logging(config.REPO_LOG_FILE, config.REPO_LOG_FORMAT)
 
         pics = [Picture(path) for path in paths if os.path.exists(path)]
         self.repo.add_pictures(pics)
 
         # process pictures                
         if process_enabled:
-            logging.debug("Processing pictures.")
+            logger.info("Processing pictures.")
             # set up pipeline
             if not process_recipe:
                 process_recipe = Recipe.fromString(
@@ -92,7 +95,7 @@ class App(object):
             pl.start()
             pl.join()
         
-        logging.debug("Saving index to file.")
+        logger.info("Saving index to file.")
         self._save_index_to_disk()
 
     def list_pics(self):
@@ -101,6 +104,7 @@ class App(object):
         self.repo_handler = RepoHandler(self.repo)
         self._load_config_from_disk()
         self._load_index_from_disk()
+        self.init_repo_logging(config.REPO_LOG_FILE, config.REPO_LOG_FORMAT)
         for pic in sorted(self.repo.index.itervalues()):
             print pic
 
@@ -143,20 +147,35 @@ class App(object):
         return cmd, args, opt.verbosity, opt.process_enabled, opt.process_recipe
     
     def init_logging(self, verbosity):
-        """Configure logging module with supplied verbosity.
+        """Configure logging and add console logger with supplied verbosity.
         
         Arguments:
-        verbosity -- loglevel according to  0 -> warning, 1 -> info, 2 -> debug
+        verbosity -- console loglevel (0 -> warning, 1 -> info, 2 -> debug)
         
         """
+        root_logger = logging.getLogger()
+        root_logger.setLevel(logging.DEBUG)
+        
+        # stdout console logger
         log_level = logging.WARNING  # default
         if verbosity == 1:
             log_level = logging.INFO
         elif verbosity >= 2:
             log_level = logging.DEBUG
-        # Basic configuration, out to stderr with a reasonable default format.
-        logging.basicConfig(level=log_level)
-
+        console = logging.StreamHandler(sys.stdout)
+        console.setLevel(log_level)
+        formatter = logging.Formatter('%(message)s')
+        console.setFormatter(formatter)
+        root_logger.addHandler(console)
+        
+    def init_repo_logging(self, log_file, log_format):
+        # repo file logging (only if repo is local)
+        if isinstance(self.connector, LocalConnector):
+            log_path = os.path.join(self.connector.url.path, log_file)
+            file_handler = logging.FileHandler(log_path)
+            formatter = logging.Formatter(log_format)
+            file_handler.setFormatter(formatter)
+            logging.getLogger().addHandler(file_handler)
 
     @staticmethod
     def main():
@@ -176,6 +195,9 @@ class App(object):
             app.list_pics()
         else:
             logging.error("invalid command: %s" % cmd)
+            
+        # clean up
+        logging.shutdown()
 
 
 if __name__ == "__main__":
