@@ -52,7 +52,7 @@ LOGDIR = os.path.join(PIC_DIR, "log")
 # repo logging
 REPO_LOG_FILE = os.path.join(PIC_DIR, "log.txt")
 REPO_LOG_LEVEL = logging.DEBUG
-REPO_LOG_FORMAT = '%(asctime)s %(levelname)s %(message)s'
+REPO_LOG_FORMAT = '%(asctime)s %(name)-15s %(levelname)-8s %(message)s'
 
 # SHA1 sidecar files on/off
 SHA1_SIDECAR_ENABLED = True
