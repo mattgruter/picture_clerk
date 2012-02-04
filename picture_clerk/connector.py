@@ -170,3 +170,8 @@ class Connector(object):
             dest_conn.disconnect()
         else:
             raise NotConnectedError()
+        
+                
+    @classmethod
+    def from_string(cls, url):
+        return cls(urlparse.urlparse(url))
