@@ -10,13 +10,19 @@ import copy
 import cPickle as pickle
 
 import config
+import repo
 
-
+class RepoNotFoundError(Exception):
+    def __init__(self, url):
+        Exception.__init__(self)
+        self.url = url
+    def __str__(self):
+        return "No repository found at %s" % self.url.geturl()
+        
 class IndexParsingError(Exception):
     def __init__(self, exp):
         Exception.__init__(self)
-        self.orig_exp = exp
-        
+        self.orig_exp = exp 
     def __str__(self):
         return "Error parsing index: %s" % str(self.exp)
 
@@ -74,7 +80,21 @@ class RepoHandler(object):
         #       e.g. json, sqlite
         pickle.dump(self.repo.index, index_fh)
 
-    
+    def save_repo(self, connector):
+        """Save repositories configuration and index to disk."""
+        try:
+            connector.connect()  
+            # write config to file
+            with connector.open(config.CONFIG_FILE, 'w') as config_fh:
+                self.save_config(config_fh)
+            # write index to file
+            index_filename = self.config.get('index', 'index_file')
+            with connector.open(index_filename, 'wb') as index_fh:
+                self.save_index(index_fh)
+        finally:
+            connector.disconnect()
+
+
     @staticmethod
     def create_default_config():
         """
@@ -87,6 +107,55 @@ class RepoHandler(object):
         cp.add_section("recipes")
         cp.set("recipes", "default", config.DEFAULT_RECIPE)
         return cp
+
+
+    @classmethod
+    def create_repo_on_disk(cls, connector, repo_config):
+        """Create repo and necessary dirs according to config. Return handler.
+        
+        connector   -- connector to repo's base dir (created if necessary)
+        repo_config -- configuration of the repository to be created
+        
+        """
+        try:
+            connector.connect()
+            if not connector.exists('.'):
+                connector.mkdir('.')
+            connector.mkdir(config.PIC_DIR)                
+            repo_handler = RepoHandler(repo.Repo(), repo_config)
+            repo_handler.save_repo(connector)
+        finally:
+            connector.disconnect()
+            
+        return repo_handler
+    
+    
+    @classmethod
+    def load_repo_from_disk(cls, connector):
+        """Load repository from disk. Return repository handler.
+        
+        connector -- connector to repo's base dir
+        
+        """
+        try:
+            connector.connect()
+            if not (connector.exists('.') and connector.exists(config.PIC_DIR)):
+                raise RepoNotFoundError(connector.url)
+            repo_handler = RepoHandler(repo.Repo())
+            
+            # load config
+            with connector.open(config.CONFIG_FILE, 'r') as config_fh:
+                repo_handler.load_config(config_fh)            
+            
+            # load config    
+            index_filename = repo_handler.config.get('index', 'index_file')
+            with connector.open(index_filename, 'rb') as index_fh:
+                repo_handler.load_index(index_fh) 
+                               
+        finally:
+            connector.disconnect()
+            
+        return repo_handler
 
 
     @staticmethod
