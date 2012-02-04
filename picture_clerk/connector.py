@@ -8,9 +8,12 @@ Created on 2011/04/24
 """
 
 import urlparse
+import logging
 
 from abc import ABCMeta, abstractmethod
 
+
+log = logging.getLogger('pic.connector')
 
 class NotConnectedError(Exception):
     pass
@@ -61,6 +64,7 @@ class Connector(object):
         #@todo: connect & disconnect should be implemented as ContextManager so
         #       that they can be used with the "with" statement.
         if not self.isconnected:
+            log.debug("Connecting to '%s'" % self.url.geturl())
             self._connect()
             self.isconnected = True
         else:
@@ -74,6 +78,7 @@ class Connector(object):
     def disconnect(self):
         """Cleanly disconnect from connector's base URL."""
         if self.isconnected:
+            log.debug("Disconnecting from '%s'" % self.url.geturl())
             self._disconnect()
             self.isconnected = False
         else:
@@ -96,6 +101,7 @@ class Connector(object):
         """
         if self.isconnected:
             path = self._rel2abs(rel_path)
+            log.debug("Opening path '%s'" % path)
             return self._open(path, mode)
         else:
             raise NotConnectedError()
@@ -116,6 +122,7 @@ class Connector(object):
         """
         if self.isconnected:
             path = self._rel2abs(rel_path)
+            log.debug("Creating directory '%s'" % path)
             self._mkdir(path, mode)
         else:
             raise NotConnectedError()
@@ -133,6 +140,8 @@ class Connector(object):
 
         """
         if self.isconnected:
+            log.debug("Copying '%s'" % \
+                          urlparse.urljoin(dest_conn.url.geturl(), dest_path))
             dest_conn.connect()
             with self.open(src_path, 'r') as src_fh:
                 with dest_conn.open(dest_path, 'w') as dest_fh:
