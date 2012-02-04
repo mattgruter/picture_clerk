@@ -16,12 +16,11 @@ import config
 
 from local_connector import LocalConnector
 from recipe import Recipe
-from repo import Repo
 from repo_handler import RepoHandler
 from picture import Picture
 from pipeline import Pipeline
 
-logger = logging.getLogger('pic.app')
+log = logging.getLogger('pic.app')
 
 class App(object):
     """PictureClerk's command line interface."""
@@ -33,33 +32,12 @@ class App(object):
         self.repo = None
         self.repo_handler = None
 
-    def _load_config_from_disk(self):
-        self.connector.connect()
-        with self.connector.open(self.config_file, 'r') as config_fh:
-            self.repo_handler.load_config(config_fh)
-
-    def _dump_config_to_disk(self):
-        self.connector.connect()
-        with self.connector.open(self.config_file, 'w') as config_fh:
-            self.repo_handler.save_config(config_fh)
-
-    def _load_index_from_disk(self):
-        self.connector.connect()
-        with self.connector.open(self.index_file, 'r') as index_fh:
-            self.repo_handler.load_index(index_fh)
-
-    def _save_index_to_disk(self):
-        self.connector.connect()
-        with self.connector.open(self.index_file, 'w') as index_fh:
-            self.repo_handler.save_index(index_fh)
-
     def init(self):
-        self.repo = Repo()
-        self.repo_handler = RepoHandler(self.repo,
-                                        RepoHandler.create_default_config())
-        RepoHandler.init_dir(self.repo_handler, self.connector)
+        repo_config = RepoHandler.create_default_config()
+        self.repo_handler = \
+            RepoHandler.create_repo_on_disk(self.connector, repo_config)
         self.init_repo_logging(config.REPO_LOG_FILE, config.REPO_LOG_FORMAT)
-        logging.info("Initialized empty PictureClerk repository")
+        log.info("Initialized empty PictureClerk repository")
 
     def add_pics(self, paths, process_enabled, process_recipe=None):
         """Add pictures to repository.
@@ -70,10 +48,8 @@ class App(object):
         process_recipe  -- recipe to use for picture processing  
         
         """
-        self.repo = Repo()
-        self.repo_handler = RepoHandler(self.repo)
-        self._load_config_from_disk()
-        self._load_index_from_disk()
+        self.repo_handler = RepoHandler.load_repo_from_disk(self.connector)
+        self.repo = self.repo_handler.repo
         self.init_repo_logging(config.REPO_LOG_FILE, config.REPO_LOG_FORMAT)
 
         pics = [Picture(path) for path in paths if os.path.exists(path)]
@@ -81,7 +57,7 @@ class App(object):
 
         # process pictures                
         if process_enabled:
-            logger.info("Processing pictures.")
+            log.info("Processing pictures.")
             # set up pipeline
             if not process_recipe:
                 process_recipe = Recipe.fromString(
@@ -95,15 +71,13 @@ class App(object):
             pl.start()
             pl.join()
         
-        logger.info("Saving index to file.")
-        self._save_index_to_disk()
+        log.info("Saving index to file.")
+        self.repo_handler.save_repo(self.connector)
 
     def list_pics(self):
         """List pictures in repository."""
-        self.repo = Repo()
-        self.repo_handler = RepoHandler(self.repo)
-        self._load_config_from_disk()
-        self._load_index_from_disk()
+        self.repo_handler = RepoHandler.load_repo_from_disk(self.connector)
+        self.repo = self.repo_handler.repo
         self.init_repo_logging(config.REPO_LOG_FILE, config.REPO_LOG_FORMAT)
         for pic in sorted(self.repo.index.itervalues()):
             print pic
@@ -194,7 +168,7 @@ class App(object):
         elif cmd == "list":
             app.list_pics()
         else:
-            logging.error("invalid command: %s" % cmd)
+            log.error("invalid command: %s" % cmd)
             
         # clean up
         logging.shutdown()
