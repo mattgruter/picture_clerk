@@ -47,8 +47,11 @@ class Connector(object):
         return "%s(%s)" % (self.__class__.__name__, repr(self.url))
     
     def _rel2abs(self, rel_path):
-        return urlparse.urljoin(self.url.path, rel_path)
-        
+        if rel_path == '.':
+            return self.url.path
+        else:
+            return urlparse.urljoin(self.url.path, rel_path)
+            
     @abstractmethod
     def _connect(self):
         pass
