@@ -8,7 +8,7 @@ Created on 2011/08/09
 
 import logging
 
-logger = logging.getLogger('pic.repo')
+log = logging.getLogger('pic.repo')
 
 class PictureAlreadyIndexedError(Exception):
     def __init__(self, pic):
@@ -53,7 +53,7 @@ class Repo(object):
         key = pic.filename
         if key in self.index:
             raise PictureAlreadyIndexedError(pic.filename)
-        logger.info("Adding %s.", pic.filename)
+        log.info("Adding %s.", pic.filename)
         self.index[key] = pic
         
     def add_pictures(self, pics):
@@ -61,7 +61,7 @@ class Repo(object):
             try:
                 self.add_picture(pic)
             except PictureAlreadyIndexedError as paie:
-                logger.info("%s already in index", paie.pic)
+                log.info("%s already in index", paie.pic)
         
     def get_pictures_iter(self):
         return self.index.itervalues()
@@ -70,7 +70,7 @@ class Repo(object):
         return list(self.get_pictures_iter())
         
     def get_picture_by_filename(self, filename):
-        logger.info("Fetching %s from repository.", filename)
+        log.info("Fetching %s from repository.", filename)
         try:
             return self.index[filename]
         except KeyError:
@@ -80,5 +80,5 @@ class Repo(object):
         key = pic.filename
         if key not in self.index:
             raise PictureNotIndexedError(pic.filename)
-        logger.info("Updating %s.", pic.filename)
+        log.info("Updating %s.", pic.filename)
         self.index[key] = pic
