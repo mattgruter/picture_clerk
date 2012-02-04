@@ -11,12 +11,14 @@ class TestConnector(Connector):
     _connect = None
     _disconnect = None
     _open = None
+    _exists = None
     _mkdir = None
     
     @classmethod
     def setup(cls):
         cls._connect = mock.Mock()
         cls._disconnect = mock.Mock()
+        cls._exists = mock.Mock()
         cls._mkdir = mock.Mock()
         
         # make sure that _open returns a (mocked) context manager
@@ -99,6 +101,18 @@ class ConnectorOpenTest(unittest.TestCase):
         """open() should raise NotConnectedError if !isconnected."""
         self.assertRaises(NotConnectedError, self.tc.open, 'path', 'rw')
         self.assertFalse(self.tc._open.called)
+        
+        
+class ConnectorExistsTest(unittest.TestCase):
+    
+    def setUp(self):
+        url = urlparse("testurl")
+        self.tc = TestConnector(url)
+        
+    def testOpenFail(self):
+        """exists() should raise NotConnectedError if !isconnected."""
+        self.assertRaises(NotConnectedError, self.tc.exists, 'path')
+        self.assertFalse(self.tc._exists.called)
         
         
 class ConnectorMkdirTest(unittest.TestCase):

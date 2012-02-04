@@ -54,10 +54,10 @@ class Connector(object):
             return self.url.path
         else:
             return urlparse.urljoin(self.url.path, rel_path)
-            
+        
     @abstractmethod
     def _connect(self):
-        pass
+        raise NotImplementedError
         
     def connect(self):
         """Setup connection to base URL."""
@@ -73,7 +73,7 @@ class Connector(object):
     
     @abstractmethod
     def _disconnect(self):
-        pass
+        raise NotImplementedError
 
     def disconnect(self):
         """Cleanly disconnect from connector's base URL."""
@@ -87,7 +87,7 @@ class Connector(object):
          
     @abstractmethod
     def _open(self, path, mode):
-        pass 
+        raise NotImplementedError
            
     def open(self, rel_path, mode):
         """Open file at the supplied relative path and return a file handle.
@@ -108,7 +108,7 @@ class Connector(object):
          
     @abstractmethod
     def _mkdir(self, path, mode):
-        pass 
+        raise NotImplementedError
             
     def mkdir(self, rel_path, mode=0777):
         """Create a directory at the supplied relative path.
@@ -124,6 +124,27 @@ class Connector(object):
             path = self._rel2abs(rel_path)
             log.debug("Creating directory '%s'" % path)
             self._mkdir(path, mode)
+        else:
+            raise NotConnectedError()
+    
+    @abstractmethod
+    def _exists(self, path):
+        raise NotImplementedError
+        
+    def exists(self, rel_path):
+        """Check if relative path exists
+        
+        Arguments:
+        rel_path -- path to check relative to connector's base URL
+        
+        Raises:
+        NotConnectedError
+        
+        """
+        if self.isconnected:
+            path = self._rel2abs(rel_path)
+            log.debug("Checking path '%s'" % path)
+            return self._exists(path)
         else:
             raise NotConnectedError()
 

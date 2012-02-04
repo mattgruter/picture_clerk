@@ -44,6 +44,11 @@ class LocalConnector(Connector):
         # Open file at supplied path and return file handle.
         # overrides Connector._open
         return open(path, mode)
+    
+    def _exists(self, path):
+        # Check if path exists.
+        # overrides Connector._exists
+        return os.path.exists(path)
             
     def _mkdir(self, path, mode):
         # Create a directory at the supplied path.
