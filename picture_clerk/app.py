@@ -10,7 +10,6 @@ Created on 2012/01/01
 import os
 import optparse
 import logging
-import urlparse
 
 import config
 
