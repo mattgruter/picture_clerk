@@ -14,6 +14,16 @@ __license__ = "GPL"
 import os.path
 import logging
 
+# application name
+APP_NAME = "PictureClerk"
+APP_SHORT_NAME = "pic"
+APP_EXEC_NAME = "pic"
+
+# application global config/log directory
+APP_DIR = os.path.join(os.path.expanduser('~'), '.' + APP_SHORT_NAME)
+
+# application global logging
+APP_LOG_FILE = os.path.join(APP_DIR, 'log')
 
 # number of workers in each stage by default
 DEFAULT_NUM_STAGEWORKERS = 1
