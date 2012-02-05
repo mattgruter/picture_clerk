@@ -7,8 +7,11 @@ Created on 2011/04/24
 
 """
 
+import os
 import urlparse
 import logging
+
+import paramiko
 
 from abc import ABCMeta, abstractmethod
 
@@ -171,7 +174,80 @@ class Connector(object):
         else:
             raise NotConnectedError()
         
-                
     @classmethod
     def from_string(cls, url):
-        return cls(urlparse.urlparse(url))
+        """Parse url string and return appropriate Connector instance.
+        
+        Arguments:
+        url -- connector's base path URL as a string, parsable by urlparse
+        
+        Example URL strings:
+           "rel/path/..."                            --> relative local path
+           "/abs/path/..."                           --> absolute local path
+           "ssh://alice@myhost.domain.org:22/~/path" --> remote SSH path
+           "file:///var/file"                        --> absolute local path
+    
+           Reference document on SSH/SFTP URI format:
+           http://tools.ietf.org/wg/secsh/draft-ietf-secsh-scp-sftp-ssh-uri/
+        
+        """
+        url = urlparse.urlparse(url)
+        if cls == Connector:
+            if not url.scheme or url.scheme == 'file':
+                return LocalConnector(url)
+            elif url.scheme == 'ssh':
+                return SSHConnector(url)
+            else:
+                raise NotImplementedError
+        else:
+            return cls(urlparse.urlparse(url))
+        
+
+class LocalConnector(Connector):
+        
+    def __init__(self, url):
+        Connector.__init__(self, url)
+        
+    def _connect(self):
+        if not os.path.exists(self.url.path):
+            raise ConnectionError(self.url)
+        return
+
+    def _disconnect(self):
+        return
+            
+    def _open(self, path, mode):
+        return open(path, mode)
+    
+    def _exists(self, path):
+        return os.path.exists(path)
+            
+    def _mkdir(self, path, mode):
+        os.mkdir(path, mode)
+        
+
+class SSHConnector(Connector):
+
+    def __init__(self, url):
+        Connector.__init__(self, url)
+            
+    def _connect(self):
+        #@todo: handle SSH authentication
+        self._ssh = paramiko.SSHClient()
+        self._ssh.load_host_keys(os.path.expanduser('~/.ssh/known_hosts'))
+        try:
+            self._ssh.connect(self.url.hostname, port=self.url.port,
+                              username=self.url.username)
+            self._sftp = self._ssh.open_sftp()
+        except paramiko.SSHException:
+            raise ConnectionError(self.url)
+        
+    def _disconnect(self):
+        self._sftp.close()
+        self._ssh.close()
+            
+    def _open(self, path, mode):
+        return self._sftp.open(path, mode)
+            
+    def _mkdir(self, path, mode):
+        self._sftp.mkdir(path, mode)

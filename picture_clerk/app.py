@@ -14,7 +14,7 @@ import urlparse
 
 import config
 
-from local_connector import LocalConnector
+from connector import Connector, LocalConnector
 from recipe import Recipe
 from repo_handler import RepoHandler
 from picture import Picture
@@ -153,8 +153,7 @@ class App(object):
 
     @staticmethod
     def main():
-        url = urlparse.urlparse('.')
-        connector = LocalConnector(url)
+        connector = Connector.from_string('.')
         app = App(connector, config_file=config.CONFIG_FILE,
                   index_file=config.INDEX_FILE)
         cmd, args, verbosity, process_enabled, process_recipe \
