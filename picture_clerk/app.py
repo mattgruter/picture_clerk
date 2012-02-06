@@ -71,7 +71,7 @@ class App(object):
             pl.join()
         
         log.info("Saving index to file.")
-        self.repo_handler.save_repo(self.connector)
+        self.repo_handler.save_repo_index()
 
     def list_pics(self):
         """List pictures in repository."""
