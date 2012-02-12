@@ -19,3 +19,5 @@
 
 * package picture_clerk with pip (http://www.pip-installer.org/en/latest/)
 or checkout packaging in python3 (see ReadItLater list).
+
+* use dependency injection (e.g. snake-guice): http://www.connorgarvey.com/blog/?p=184
