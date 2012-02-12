@@ -9,7 +9,7 @@ import copy
 import cPickle as pickle
 
 import config
-import repo
+import index
 
 class RepoNotFoundError(Exception):
     def __init__(self, url):
@@ -28,19 +28,19 @@ class IndexParsingError(Exception):
 
 class RepoHandler(object):
 
-    def __init__(self, repo, config, connector):
+    def __init__(self, index, config, connector):
         """RepoHandler helps administration of repositories.
         
         There are methods for creating a new repository directory structure,
-        loading an existing repository from disk, loading and saving repo
-        index & configuration and cloning an existing repository.
+        loading an existing repository from disk, loading and saving index &
+        configuration and cloning an existing repository.
         
-        repo      -- Repo instance
+        index      -- PictureIndex instance
         config    -- repository specific configuration (type ConfigParser)
-        connector -- Connector instance pointing to repo's location
+        connector -- Connector instance pointing to index's location
         
         """
-        self.repo = repo
+        self.index = index
         self.config = config
         self.connector = connector
 
@@ -77,7 +77,7 @@ class RepoHandler(object):
             self.connector.connect()
             index_filename = self.config['index.file']
             with self.open(index_filename, 'rb') as index_fh:
-                self.repo.index = self.read_index(index_fh)
+                self.index.index = self.read_index(index_fh)
         except: # disconnect in case of exception, otherwise stay connected
             self.connector.disconnect()
             raise
@@ -88,7 +88,7 @@ class RepoHandler(object):
             self.connector.connect()
             index_filename = self.config['index.file']
             with self.connector.open(index_filename, 'wb') as index_fh:
-                self.dump_index(self.repo.index, index_fh)
+                self.dump_index(self.index.index, index_fh)
         except: # disconnect in case of exception, otherwise stay connected
             self.connector.disconnect()
             raise
@@ -98,7 +98,7 @@ class RepoHandler(object):
     def create_repo_on_disk(cls, connector, conf):
         """Create repo and necessary dirs according to config. Return handler.
         
-        connector -- connector to repo's base dir (created if necessary)
+        connector -- connector to index's base dir (created if necessary)
         conf      -- repository specific configuration
         
         """
@@ -109,7 +109,7 @@ class RepoHandler(object):
             connector.mkdir(config.PIC_DIR)
             with connector.open(config.CONFIG_FILE, 'w') as config_fh:
                 conf.write(config_fh)
-            handler = RepoHandler(repo.Repo(), conf, connector)
+            handler = RepoHandler(index.PictureIndex(), conf, connector)
             handler.save_repo_index()
         finally:
             connector.disconnect()
@@ -119,7 +119,7 @@ class RepoHandler(object):
     def load_repo_from_disk(cls, connector):
         """Load configuration & repository from disk. Return repository handler.
         
-        connector -- connector to repo's base dir
+        connector -- connector to index's base dir
         
         """
         try:
@@ -133,10 +133,10 @@ class RepoHandler(object):
                 conf.read(config_fh)
 
             # load index        
-            handler = RepoHandler(repo.Repo(), conf, connector)
+            handler = RepoHandler(index.PictureIndex(), conf, connector)
             index_filename = handler.config['index.file']
             with connector.open(index_filename, 'rb') as index_fh:
-                handler.repo.index = handler.read_index(index_fh)
+                handler.index.index = handler.read_index(index_fh)
 
         finally:
             connector.disconnect()
@@ -148,14 +148,14 @@ class RepoHandler(object):
         """Clone an existing repository to a new location and return handler.
         
         src  -- connector pointing to source repo's location
-        dest -- connector pointing to location of new clone-repo
+        dest -- connector pointing to location of new clone-index
         
         """
         # clone repo & handler
         src_handler = RepoHandler.load_repo_from_disk(src)
         conf = copy.deepcopy(src_handler.config)
         handler = RepoHandler.create_repo_on_disk(conf, dest)
-        handler.repo.index = copy.deepcopy(src_handler.repo.index)
+        handler.index.index = copy.deepcopy(src_handler.index.index)
 
         # clone pictures
         # @FIXME: dest will be connected/disconnected many times during cloning
@@ -163,7 +163,7 @@ class RepoHandler(object):
         try:
             src.connect()
             dest.disconnect()
-            for picture in src_handler.repo.index:
+            for picture in src_handler.index.index:
                 for fname in picture.get_filenames():
                     src.copy(fname, dest, dest=fname)
         finally:

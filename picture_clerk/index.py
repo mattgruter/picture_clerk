@@ -29,7 +29,7 @@ class PictureNotIndexedError(KeyError):
         return "PictureNotIndexedError(%s)" % self.pic
 
 
-class Repo(object):
+class PictureIndex(object):
     """
     PictureClerk repository
     """
@@ -37,7 +37,7 @@ class Repo(object):
         self.index = index
 
     def __repr__(self):
-        return "Repo(%s)" % self.index
+        return "PictureIndex(%s)" % self.index
 
     def __str__(self):
         return repr(self)
