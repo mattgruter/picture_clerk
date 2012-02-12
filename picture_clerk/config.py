@@ -83,7 +83,7 @@ DEFAULT_RECIPE = "HashDigestWorker, ThumbWorker, AutorotWorker, MetadataWorker"
 REPO_CONFIG = {
     'index.file': INDEX_FILE,
     'index.format_version': INDEX_FORMAT_VERSION,
-    'recipe.default': DEFAULT_RECIPE,
+    'recipes.default': DEFAULT_RECIPE,
     'thumbnails.sidecar_dir': THUMB_SIDECAR_DIR,
     'thumbnails.copy_metadata': THUMB_COPY_METADATA,
     'checksums.sidecar_enabled': SHA1_SIDECAR_ENABLED,

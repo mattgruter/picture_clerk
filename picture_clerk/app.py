@@ -32,10 +32,11 @@ class App(object):
         self.repo_handler = None
 
     def init(self):
-        repo_config = RepoHandler.create_default_config()
+        repo_config = config.Config.from_dict(config.REPO_CONFIG)
         self.repo_handler = \
             RepoHandler.create_repo_on_disk(self.connector, repo_config)
-        self.init_repo_logging(config.REPO_LOG_FILE, config.REPO_LOG_FORMAT)
+        self.init_repo_logging(repo_config['logging.file'],
+                               repo_config['logging.format'])
         log.info("Initialized empty PictureClerk repository")
 
     def add_pics(self, paths, process_enabled, process_recipe=None):
@@ -49,8 +50,8 @@ class App(object):
         """
         self.repo_handler = RepoHandler.load_repo_from_disk(self.connector)
         self.repo = self.repo_handler.repo
-        self.init_repo_logging(config.REPO_LOG_FILE, config.REPO_LOG_FORMAT)
-
+        self.init_repo_logging(self.repo_handler.config['logging.file'],
+                               self.repo_handler.config['logging.format'])
         pics = [Picture(path) for path in paths if os.path.exists(path)]
         self.repo.add_pictures(pics)
 
@@ -60,7 +61,7 @@ class App(object):
             # set up pipeline
             if not process_recipe:
                 process_recipe = Recipe.fromString(
-                             self.repo_handler.config.get("recipes", "default"))
+                             self.repo_handler.config['recipes.default'])
             pl = Pipeline('Pipeline1', process_recipe,
                           path=self.connector.url.path,
                           logdir=config.LOGDIR)
@@ -69,7 +70,7 @@ class App(object):
             # process pictures
             pl.start()
             pl.join()
-        
+
         log.info("Saving index to file.")
         self.repo_handler.save_repo_index()
 
@@ -77,7 +78,8 @@ class App(object):
         """List pictures in repository."""
         self.repo_handler = RepoHandler.load_repo_from_disk(self.connector)
         self.repo = self.repo_handler.repo
-        self.init_repo_logging(config.REPO_LOG_FILE, config.REPO_LOG_FORMAT)
+        self.init_repo_logging(self.repo_handler.config['logging.file'],
+                               self.repo_handler.config['logging.format'])
         for pic in sorted(self.repo.index.itervalues()):
             print pic
 
@@ -96,9 +98,9 @@ class App(object):
         "  init    create an empty repository\n"\
         "  list    list of pictures in repository"
         parser = optparse.OptionParser(usage)
-        parser.add_option("-v", "--verbose", dest="verbosity", action="count", 
+        parser.add_option("-v", "--verbose", dest="verbosity", action="count",
                           help="increase verbosity (also multiple times)")
-        
+
         # Options for the 'clone' command
         add_opts = optparse.OptionGroup(parser, "Add options",
                                  "Options for the add command.")
@@ -112,13 +114,13 @@ class App(object):
         parser.add_option_group(add_opts)
 
         parser.set_defaults(process_enabled=True, process_recipe=None)
-        
+
         opt, args = parser.parse_args()
         if not args:
             parser.error("no command given")
         cmd = args.pop(0)
         return cmd, args, opt.verbosity, opt.process_enabled, opt.process_recipe
-    
+
     def init_logging(self, verbosity):
         """Configure logging and add console logger with supplied verbosity.
         
@@ -128,7 +130,7 @@ class App(object):
         """
         root_logger = logging.getLogger()
         root_logger.setLevel(logging.DEBUG)
-        
+
         # stdout console logger
         log_level = logging.WARNING  # default
         if verbosity == 1:
@@ -140,7 +142,7 @@ class App(object):
         formatter = logging.Formatter('%(message)s')
         console.setFormatter(formatter)
         root_logger.addHandler(console)
-        
+
     def init_repo_logging(self, log_file, log_format):
         # repo file logging (only if repo is local)
         if isinstance(self.connector, LocalConnector):
@@ -155,19 +157,18 @@ class App(object):
         connector = Connector.from_string('.')
         app = App(connector, config_file=config.CONFIG_FILE,
                   index_file=config.INDEX_FILE)
-        cmd, args, verbosity, process_enabled, process_recipe \
-            = app.parse_command_line()
+        cmd, args, verbosity, proc_enabled, recipe = app.parse_command_line()
         app.init_logging(verbosity)
 
         if cmd == "init":
             app.init()
         elif cmd == "add":
-            app.add_pics(args, process_enabled, process_recipe)
+            app.add_pics(args, proc_enabled, recipe)
         elif cmd == "list":
             app.list_pics()
         else:
             log.error("invalid command: %s" % cmd)
-            
+
         # clean up
         logging.shutdown()
 
