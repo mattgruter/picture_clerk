@@ -80,7 +80,7 @@ class App(object):
         self.index = self.repo_handler.index
         self.init_repo_logging(self.repo_handler.config['logging.file'],
                                self.repo_handler.config['logging.format'])
-        for pic in sorted(self.index.index.itervalues()):
+        for pic in sorted(self.index.get_pictures_iter()):
             print pic
 
     def parse_command_line(self):

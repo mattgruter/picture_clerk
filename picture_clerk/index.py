@@ -6,7 +6,9 @@ Created on 2011/08/09
 @license: GPL
 """
 
+import cPickle as pickle
 import logging
+
 
 log = logging.getLogger('pic.repo')
 
@@ -27,6 +29,13 @@ class PictureNotIndexedError(KeyError):
         return "%s not in index" % self.pic
     def __repr__(self):
         return "PictureNotIndexedError(%s)" % self.pic
+
+class IndexParsingError(Exception):
+    def __init__(self, exp):
+        Exception.__init__(self)
+        self.orig_exp = exp
+    def __str__(self):
+        return "Error parsing index: %s" % str(self.exp)
 
 
 class PictureIndex(object):
@@ -81,3 +90,30 @@ class PictureIndex(object):
             raise PictureNotIndexedError(pic.filename)
         log.info("Updating %s.", pic.filename)
         self.index[key] = pic
+
+    def read(self, fh):
+        """Load picture index from supplied file handle.
+        
+        Arguments:
+        fh -- readable file handle pointing to index file
+        
+        Raises:
+        IndexParsingError if index can not be unpickled
+        
+        """
+        try:
+            self.index = pickle.load(fh)
+        except (pickle.UnpicklingError, EOFError, KeyError) as e:
+            raise IndexParsingError(e)
+
+    def write(self, fh):
+        """Dump picture index to supplied file handle.
+        
+        Arguments:
+        
+        fh -- writable file handle
+
+        """
+        # @TODO: use human-readable & portable format/store instead of pickle
+        #        e.g. json, sqlite
+        pickle.dump(self.index, fh)

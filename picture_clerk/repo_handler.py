@@ -6,7 +6,6 @@ Created on 2011/08/09
 @license: GPL
 """
 import copy
-import cPickle as pickle
 
 import config
 import index
@@ -17,13 +16,6 @@ class RepoNotFoundError(Exception):
         self.url = url
     def __str__(self):
         return "No repository found at %s" % self.url.geturl()
-
-class IndexParsingError(Exception):
-    def __init__(self, exp):
-        Exception.__init__(self)
-        self.orig_exp = exp
-    def __str__(self):
-        return "Error parsing index: %s" % str(self.exp)
 
 
 class RepoHandler(object):
@@ -44,51 +36,23 @@ class RepoHandler(object):
         self.config = config
         self.connector = connector
 
-    def read_index(self, fh):
-        """Load and return repo's picture index from supplied file handle.
-        
-        Arguments:
-        fh -- readable file handle pointing to the index file
-        
-        Raises:
-        IndexParsingError if index can not be unpickled
-        
-        """
-        try:
-            index = pickle.load(fh)
-        except (pickle.UnpicklingError, EOFError, KeyError) as e:
-            raise IndexParsingError(e)
-        return index
-
-    def dump_index(self, index, fh):
-        """Dump repo's picture index to supplied file handle.
-        
-        Arguments:
-        
-        fh -- writable file handle
-
-        """
-        # @TODO: use human-readable & portable format/store instead of pickle
-        #        e.g. json, sqlite
-        pickle.dump(index, fh)
-
     def load_repo_index(self):
         try:
             self.connector.connect()
             index_filename = self.config['index.file']
             with self.open(index_filename, 'rb') as index_fh:
-                self.index.index = self.read_index(index_fh)
+                self.index.read(index_fh)
         except: # disconnect in case of exception, otherwise stay connected
             self.connector.disconnect()
             raise
 
     def save_repo_index(self):
-        """Save repository picture index to disk."""
+        """Save picture index to disk."""
         try:
             self.connector.connect()
             index_filename = self.config['index.file']
             with self.connector.open(index_filename, 'wb') as index_fh:
-                self.dump_index(self.index.index, index_fh)
+                self.index.write(index_fh)
         except: # disconnect in case of exception, otherwise stay connected
             self.connector.disconnect()
             raise
@@ -126,22 +90,18 @@ class RepoHandler(object):
             connector.connect()
             if not (connector.exists('.') and connector.exists(config.PIC_DIR)):
                 raise RepoNotFoundError(connector.url)
-
             # load config
             conf = config.Config(config.REPO_CONFIG)
             with connector.open(config.CONFIG_FILE, 'r') as config_fh:
                 conf.read(config_fh)
-
-            # load index        
-            handler = RepoHandler(index.PictureIndex(), conf, connector)
-            index_filename = handler.config['index.file']
+            # load index
+            pic_index = index.PictureIndex()
+            index_filename = conf['index.file']
             with connector.open(index_filename, 'rb') as index_fh:
-                handler.index.index = handler.read_index(index_fh)
-
+                pic_index.read(index_fh)
         finally:
             connector.disconnect()
-
-        return handler
+        return RepoHandler(pic_index, conf, connector)
 
     @classmethod
     def clone_repo(cls, src, dest):
