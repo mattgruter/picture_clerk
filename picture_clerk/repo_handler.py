@@ -107,10 +107,9 @@ class RepoHandler(object):
             if not connector.exists('.'):
                 connector.mkdir('.')
             connector.mkdir(config.PIC_DIR)
-            handler = RepoHandler(repo.Repo(), conf, connector)
             with connector.open(config.CONFIG_FILE, 'w') as config_fh:
-                handler.config.write(config_fh)
-
+                conf.write(config_fh)
+            handler = RepoHandler(repo.Repo(), conf, connector)
             handler.save_repo_index()
         finally:
             connector.disconnect()
@@ -118,7 +117,7 @@ class RepoHandler(object):
 
     @classmethod
     def load_repo_from_disk(cls, connector):
-        """Load repository from disk. Return repository handler.
+        """Load configuration & repository from disk. Return repository handler.
         
         connector -- connector to repo's base dir
         
@@ -127,13 +126,14 @@ class RepoHandler(object):
             connector.connect()
             if not (connector.exists('.') and connector.exists(config.PIC_DIR)):
                 raise RepoNotFoundError(connector.url)
-            handler = RepoHandler(repo.Repo(), config.Config(), connector)
 
             # load config
+            conf = config.Config(config.REPO_CONFIG)
             with connector.open(config.CONFIG_FILE, 'r') as config_fh:
-                handler.config.read(config_fh)
+                conf.read(config_fh)
 
-            # load index    
+            # load index        
+            handler = RepoHandler(repo.Repo(), conf, connector)
             index_filename = handler.config['index.file']
             with connector.open(index_filename, 'rb') as index_fh:
                 handler.repo.index = handler.read_index(index_fh)
