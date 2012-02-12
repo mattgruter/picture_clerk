@@ -18,10 +18,10 @@ class RepoNotFoundError(Exception):
         return "No repository found at %s" % self.url.geturl()
 
 
-class RepoHandler(object):
+class Repo(object):
 
     def __init__(self, index, config, connector):
-        """RepoHandler helps administration of repositories.
+        """A repository contains and manages a picture index.
         
         There are methods for creating a new repository directory structure,
         loading an existing repository from disk, loading and saving index &
@@ -36,17 +36,7 @@ class RepoHandler(object):
         self.config = config
         self.connector = connector
 
-    def load_repo_index(self):
-        try:
-            self.connector.connect()
-            index_filename = self.config['index.file']
-            with self.open(index_filename, 'rb') as index_fh:
-                self.index.read(index_fh)
-        except: # disconnect in case of exception, otherwise stay connected
-            self.connector.disconnect()
-            raise
-
-    def save_repo_index(self):
+    def save_to_disk(self):
         """Save picture index to disk."""
         try:
             self.connector.connect()
@@ -59,8 +49,8 @@ class RepoHandler(object):
 
 
     @classmethod
-    def create_repo_on_disk(cls, connector, conf):
-        """Create repo and necessary dirs according to config. Return handler.
+    def create_on_disk(cls, connector, conf):
+        """Create repo and necessary dirs according to config. Return repo.
         
         connector -- connector to index's base dir (created if necessary)
         conf      -- repository specific configuration
@@ -73,15 +63,15 @@ class RepoHandler(object):
             connector.mkdir(config.PIC_DIR)
             with connector.open(config.CONFIG_FILE, 'w') as config_fh:
                 conf.write(config_fh)
-            handler = RepoHandler(index.PictureIndex(), conf, connector)
-            handler.save_repo_index()
+            repo = Repo(index.PictureIndex(), conf, connector)
+            repo.save_to_disk()
         finally:
             connector.disconnect()
-        return handler
+        return repo
 
     @classmethod
-    def load_repo_from_disk(cls, connector):
-        """Load configuration & repository from disk. Return repository handler.
+    def load_from_disk(cls, connector):
+        """Load configuration & repository from disk. Return repo.
         
         connector -- connector to index's base dir
         
@@ -101,21 +91,21 @@ class RepoHandler(object):
                 pic_index.read(index_fh)
         finally:
             connector.disconnect()
-        return RepoHandler(pic_index, conf, connector)
+        return Repo(pic_index, conf, connector)
 
     @classmethod
-    def clone_repo(cls, src, dest):
-        """Clone an existing repository to a new location and return handler.
+    def clone(cls, src, dest):
+        """Clone an existing repository to a new location and return it.
         
         src  -- connector pointing to source repo's location
         dest -- connector pointing to location of new clone-index
         
         """
-        # clone repo & handler
-        src_handler = RepoHandler.load_repo_from_disk(src)
-        conf = copy.deepcopy(src_handler.config)
-        handler = RepoHandler.create_repo_on_disk(conf, dest)
-        handler.index.index = copy.deepcopy(src_handler.index.index)
+        # clone repo
+        src_repo = Repo.load_from_disk(src)
+        conf = copy.deepcopy(src_repo.config)
+        repo = Repo.create_on_disk(conf, dest)
+        repo.index.index = copy.deepcopy(src_repo.index.index)
 
         # clone pictures
         # @FIXME: dest will be connected/disconnected many times during cloning
@@ -123,11 +113,11 @@ class RepoHandler(object):
         try:
             src.connect()
             dest.disconnect()
-            for picture in src_handler.index.index:
+            for picture in src_repo.index.index:
                 for fname in picture.get_filenames():
                     src.copy(fname, dest, dest=fname)
         finally:
             src.disconnect()
             dest.disconnect()
 
-        return handler
+        return repo

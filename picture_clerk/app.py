@@ -15,7 +15,7 @@ import config
 
 from connector import Connector, LocalConnector
 from recipe import Recipe
-from repo_handler import RepoHandler
+from repo import Repo
 from picture import Picture
 from pipeline import Pipeline
 
@@ -29,12 +29,11 @@ class App(object):
         self.config_file = config_file
         self.index_file = index_file
         self.index = None
-        self.repo_handler = None
+        self.repo = None
 
     def init(self):
         repo_config = config.Config.from_dict(config.REPO_CONFIG)
-        self.repo_handler = \
-            RepoHandler.create_repo_on_disk(self.connector, repo_config)
+        self.repo = Repo.create_on_disk(self.connector, repo_config)
         self.init_repo_logging(repo_config['logging.file'],
                                repo_config['logging.format'])
         log.info("Initialized empty PictureClerk repository")
@@ -48,10 +47,10 @@ class App(object):
         process_recipe  -- recipe to use for picture processing  
         
         """
-        self.repo_handler = RepoHandler.load_repo_from_disk(self.connector)
-        self.index = self.repo_handler.index
-        self.init_repo_logging(self.repo_handler.config['logging.file'],
-                               self.repo_handler.config['logging.format'])
+        self.repo = Repo.load_from_disk(self.connector)
+        self.index = self.repo.index
+        self.init_repo_logging(self.repo.config['logging.file'],
+                               self.repo.config['logging.format'])
         pics = [Picture(path) for path in paths if os.path.exists(path)]
         self.index.add_pictures(pics)
 
@@ -61,7 +60,7 @@ class App(object):
             # set up pipeline
             if not process_recipe:
                 process_recipe = Recipe.fromString(
-                             self.repo_handler.config['recipes.default'])
+                             self.repo.config['recipes.default'])
             pl = Pipeline('Pipeline1', process_recipe,
                           path=self.connector.url.path,
                           logdir=config.LOGDIR)
@@ -72,14 +71,14 @@ class App(object):
             pl.join()
 
         log.info("Saving index to file.")
-        self.repo_handler.save_repo_index()
+        self.repo.save_to_disk()
 
     def list_pics(self):
         """List pictures in repository."""
-        self.repo_handler = RepoHandler.load_repo_from_disk(self.connector)
-        self.index = self.repo_handler.index
-        self.init_repo_logging(self.repo_handler.config['logging.file'],
-                               self.repo_handler.config['logging.format'])
+        self.repo = Repo.load_from_disk(self.connector)
+        self.index = self.repo.index
+        self.init_repo_logging(self.repo.config['logging.file'],
+                               self.repo.config['logging.format'])
         for pic in sorted(self.index.get_pictures_iter()):
             print pic
 
