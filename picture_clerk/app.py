@@ -147,8 +147,7 @@ class App(object):
     @staticmethod
     def main():
         connector = Connector.from_string('.')
-        app = App(connector, config_file=config.CONFIG_FILE,
-                  index_file=config.INDEX_FILE)
+        app = App(connector)
         cmd, args, verbosity, proc_enabled, recipe = app.parse_command_line()
         app.init_logging(verbosity)
 
