@@ -11,7 +11,6 @@ __copyright__ = "Copyright (c) 2008 Matthias Grueter"
 __license__ = "GPL"
 
 
-import sys
 import os.path
 
 
@@ -52,19 +51,19 @@ class Picture(object):
         self.metadata = dict()
         # history
         self.history = []
-        
+
     def _str_sidecars(self):
         rtn = str()
         for s in self._sidecars:
             rtn += ('\n   %s: %s' % (s.content_type, s.path))
         return rtn
-        
+
     def _str_metadata(self):
         rtn = str()
-        for k,v in sorted(self.metadata.iteritems()):
+        for k, v in sorted(self.metadata.iteritems()):
             rtn += ('\n   %s: %s' % (k, v))
-        return rtn 
-                    
+        return rtn
+
     def __str__(self):
         rtn = self.filename
         if self.metadata:
@@ -74,16 +73,16 @@ class Picture(object):
             rtn += ('\n  Sidecar files:')
             rtn += self._str_sidecars()
         return rtn
-        
+
     def __repr__(self):
         return str(self)
-        
+
     def __cmp__(self, other):
         return cmp(self.filename, other.filename)
-               
+
     def get_filenames(self):
         return [self.filename] + [sidecar.path for sidecar in self._sidecars]
-        
+
     def add_sidecar(self, path, content_type):
         # TODO: Maybe use descriptors for this
         sidecar = Sidecar(path, content_type)
@@ -92,7 +91,7 @@ class Picture(object):
         # if sidecar is a thumbnail, replace the existing thumbnail with this one.
         if content_type == "Thumbnail":
             self.thumbnail = path
-        
+
     def del_sidecar(self, sidecar):
         self._sidecars.discard(sidecar)
         sidecar.picture = None
@@ -100,7 +99,7 @@ class Picture(object):
     # FIXME: rename to get_sidecars
     def list_sidecars(self):
         return self._sidecars
-        
+
     def get_thumbnails(self):
         return [sidecar for sidecar in self.list_sidecars()
                     if sidecar.content_type.lower() == "thumbnail"]
@@ -119,10 +118,10 @@ class Sidecar(object):
         self.path = path
         self.content_type = content_type
         self.picture = None
-        
+
     def __str__(self):
         return '%s: %s' % (self.content_type, self.path)
-        
+
 
 #class Thumbnail(Sidecar):
 #    """
