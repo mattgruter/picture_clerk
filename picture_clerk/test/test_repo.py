@@ -7,15 +7,15 @@ Created on 2011/08/09
 """
 import unittest
 import mock
-import os
-import StringIO
-import contextlib
+import urlparse
 
-import connector
 import config
 import index
 
+from testlib import MockConnector
+from index import PictureIndex
 from repo import Repo
+from picture import Picture
 
 
 class BasicTests(unittest.TestCase):
@@ -43,47 +43,81 @@ class BasicTests(unittest.TestCase):
 
 class FactoryTests(unittest.TestCase):
 
-    def mock_open(self, path, mode):
-        if os.path.basename(path) == 'config':
-            return self.conf_buf
-        else:
-            return self.pi_buf
-
-    def create_mock_connector(self):
-        con = mock.Mock(spec_set=connector.Connector)
-        con.exists = mock.Mock(return_value=True)
-        con.open = self.mock_open
-        return con
-
-    def create_mock_file(self, obj):
-        buf = StringIO.StringIO()
-        obj.write(buf)
-        buf.seek(0)
-        cm = contextlib.closing(buf)
-        return cm
-
     def setUp(self):
-        self.conf = config.Config.from_dict({'index.file': 'index-path'})
-        self.pi = index.PictureIndex({'pic1': 'fileA', 'pic2': 'fileB'})
+        self.connector = MockConnector(urlparse.urlparse('/baseurl/repo/'))
+#        self.pi = index.PictureIndex({'pic1':'fileA', 'pic2':'fileB'})
+        self.pi = index.PictureIndex()
+        self.pi.add_pictures((Picture('pic1'), Picture('pic2'), Picture('pic3')))
+        self.conf = config.Config(config.REPO_CONFIG)
+        self.conf['index.file'] = 'mock-index-path'
 
-    @unittest.skip
-    def test_create_on_disk(self):
-        #@todo
-        self.assertTrue(False)
+    def test_create_on_disk_empty(self):
+        repo = Repo.create_on_disk(self.connector, self.conf)
 
-    def test_load_from_disk(self):
-        self.conf_buf = self.create_mock_file(self.conf)
-        self.pi_buf = self.create_mock_file(self.pi)
-        con = self.create_mock_connector()
-        repo = Repo.load_from_disk(con)
-        self.assertEqual(repo.connector, con)
-        self.assertEqual(repo.config['index.file'], 'index-path')
+        # test repo
+        self.assertIsInstance(repo, Repo)
+        self.assertIs(repo.connector, self.connector)
+        self.assertIs(repo.config, self.conf)
+        self.assertEqual(repo.index, PictureIndex())
+
+        # test conf on disk
+        self.assertTrue(self.connector.opened(config.CONFIG_FILE))
+        conf_on_disk = config.Config()
+        conf_on_disk.read(self.connector.get_file(config.CONFIG_FILE))
+        self.assertEqual(conf_on_disk, self.conf)
+
+        # test picture index on disk
+        self.assertTrue(self.connector.opened('mock-index-path'))
+        index_on_disk = index.PictureIndex()
+        index_on_disk.read(self.connector.get_file('mock-index-path'))
+        self.assertEqual(index_on_disk, index.PictureIndex())
+
+    def test_create_on_disk_with_index(self):
+        repo = Repo.create_on_disk(self.connector, self.conf, self.pi)
+
+        # test repo
+        self.assertIsInstance(repo, Repo)
+        self.assertIs(repo.connector, self.connector)
+        self.assertIs(repo.config, self.conf)
         self.assertEqual(repo.index, self.pi)
 
-    @unittest.skip
+        # test conf on disk
+        self.assertTrue(self.connector.opened(config.CONFIG_FILE))
+        conf_on_disk = config.Config()
+        conf_on_disk.read(self.connector.get_file(config.CONFIG_FILE))
+        self.assertEqual(conf_on_disk, self.conf)
+
+        # test picture index on disk
+        self.assertTrue(self.connector.opened('mock-index-path'))
+        index_on_disk = index.PictureIndex()
+        index_on_disk.read(self.connector.get_file('mock-index-path'))
+        self.assertEqual(index_on_disk, self.pi)
+
+    def test_created_and_load_from_disk(self):
+        repo_created = Repo.create_on_disk(self.connector, self.conf, self.pi)
+        repo_loaded = Repo.load_from_disk(self.connector)
+
+        self.assertIsInstance(repo_loaded, Repo)
+        self.assertEqual(repo_loaded.config, repo_created.config)
+        self.assertIsNot(repo_loaded.config, repo_created.config)
+        self.assertEqual(repo_loaded.index, repo_created.index)
+        self.assertIsNot(repo_loaded.index, repo_created.index)
+        self.assertIsNot(repo_loaded, repo_created)
+        self.assertIs(repo_loaded.connector, self.connector)
+
     def test_clone(self):
-        #@todo
-        self.assertTrue(False)
+        src_repo = Repo.create_on_disk(self.connector, self.conf, self.pi)
+        dest_connector = MockConnector(urlparse.urlparse('/destrepo/baseurl/'))
+        dest_repo = Repo.clone(src=self.connector, dest=dest_connector)
+
+        self.assertIsInstance(dest_repo, Repo)
+        self.assertEqual(dest_repo.config, src_repo.config)
+        self.assertIsNot(dest_repo.config, src_repo.config)
+        self.assertEqual(dest_repo.index, src_repo.index)
+        self.assertIsNot(dest_repo.index, src_repo.index)
+        self.assertIsNot(dest_repo, src_repo)
+        self.assertTrue(dest_connector.opened(config.CONFIG_FILE))
+        self.assertTrue(dest_connector.opened('mock-index-path'))
 
 
 if __name__ == "__main__":

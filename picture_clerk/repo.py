@@ -49,11 +49,12 @@ class Repo(object):
 
 
     @classmethod
-    def create_on_disk(cls, connector, conf):
+    def create_on_disk(cls, connector, conf, pi=index.PictureIndex()):
         """Create repo and necessary dirs according to config. Return repo.
         
         connector -- connector to index's base dir (created if necessary)
         conf      -- repository specific configuration
+        pi        -- picture index (optional)
         
         """
         try:
@@ -63,7 +64,7 @@ class Repo(object):
             connector.mkdir(config.PIC_DIR)
             with connector.open(config.CONFIG_FILE, 'w') as config_fh:
                 conf.write(config_fh)
-            repo = Repo(index.PictureIndex(), conf, connector)
+            repo = Repo(pi, conf, connector)
             repo.save_to_disk()
         finally:
             connector.disconnect()
@@ -103,9 +104,9 @@ class Repo(object):
         """
         # clone repo
         src_repo = Repo.load_from_disk(src)
-        conf = copy.deepcopy(src_repo.config)
-        repo = Repo.create_on_disk(conf, dest)
-        repo.index.index = copy.deepcopy(src_repo.index.index)
+        repo = Repo.create_on_disk(connector=dest,
+                                   conf=src_repo.config,
+                                   pi=copy.deepcopy(src_repo.index))
 
         # clone pictures
         # @FIXME: dest will be connected/disconnected many times during cloning
@@ -113,9 +114,9 @@ class Repo(object):
         try:
             src.connect()
             dest.disconnect()
-            for picture in src_repo.index.index:
+            for picture in src_repo.index.get_pictures():
                 for fname in picture.get_filenames():
-                    src.copy(fname, dest, dest=fname)
+                    src.copy(fname, dest, dest_path=fname)
         finally:
             src.disconnect()
             dest.disconnect()
