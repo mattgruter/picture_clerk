@@ -49,7 +49,7 @@ class Repo(object):
 
 
     @classmethod
-    def create_on_disk(cls, connector, conf, pi=index.PictureIndex()):
+    def create_on_disk(cls, connector, conf, pi=None):
         """Create repo and necessary dirs according to config. Return repo.
         
         connector -- connector to index's base dir (created if necessary)
@@ -57,6 +57,8 @@ class Repo(object):
         pi        -- picture index (optional)
         
         """
+        if not pi:
+            pi = index.PictureIndex()
         try:
             connector.connect()
             if not connector.exists('.'):
