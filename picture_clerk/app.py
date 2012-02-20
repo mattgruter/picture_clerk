@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 """
-Created on 2012/01/01
-
 @author: Matthias Grueter <matthias@grueter.name>
 @copyright: Copyright (c) 2012 Matthias Grueter
 @license: GPL
@@ -24,16 +22,12 @@ log = logging.getLogger('pic.app')
 class App(object):
     """PictureClerk's command line interface."""
 
-    def __init__(self, connector, config_file, index_file):
+    def __init__(self, connector):
         self.connector = connector
-        self.config_file = config_file
-        self.index_file = index_file
-        self.index = None
-        self.repo = None
 
     def init(self):
         repo_config = config.Config.from_dict(config.REPO_CONFIG)
-        self.repo = Repo.create_on_disk(self.connector, repo_config)
+        Repo.create_on_disk(self.connector, repo_config)
         self.init_repo_logging(repo_config['logging.file'],
                                repo_config['logging.format'])
         log.info("Initialized empty PictureClerk repository")
@@ -47,12 +41,11 @@ class App(object):
         process_recipe  -- recipe to use for picture processing  
         
         """
-        self.repo = Repo.load_from_disk(self.connector)
-        self.index = self.repo.index
-        self.init_repo_logging(self.repo.config['logging.file'],
-                               self.repo.config['logging.format'])
+        repo = Repo.load_from_disk(self.connector)
+        self.init_repo_logging(repo.config['logging.file'],
+                               repo.config['logging.format'])
         pics = [Picture(path) for path in paths if os.path.exists(path)]
-        self.index.add_many(pics)
+        repo.index.add_many(pics)
 
         # process pictures                
         if process_enabled:
@@ -60,7 +53,7 @@ class App(object):
             # set up pipeline
             if not process_recipe:
                 process_recipe = Recipe.fromString(
-                             self.repo.config['recipes.default'])
+                             repo.config['recipes.default'])
             pl = Pipeline('Pipeline1', process_recipe,
                           path=self.connector.url.path,
                           logdir=config.LOGDIR)
@@ -71,16 +64,16 @@ class App(object):
             pl.join()
 
         log.info("Saving index to file.")
-        self.repo.save_to_disk()
+        repo.save_to_disk()
 
     def list_pics(self):
-        """List pictures in repository."""
-        self.repo = Repo.load_from_disk(self.connector)
-        self.index = self.repo.index
-        self.init_repo_logging(self.repo.config['logging.file'],
-                               self.repo.config['logging.format'])
-        for pic in sorted(self.index.iterpics()):
-            print pic
+        """Return list of pictures in repository."""
+        repo = Repo.load_from_disk(self.connector)
+        self.index = repo.index
+        self.init_repo_logging(repo.config['logging.file'],
+                               repo.config['logging.format'])
+
+        return '\n'.join(sorted((str(pic) for pic in self.index.pics())))
 
     def parse_command_line(self):
         """Parse command line (sys.argv) and return the parsed args & opts.
