@@ -6,11 +6,12 @@ Created on 2011/08/09
 @license: GPL
 """
 
+import collections
 import cPickle as pickle
 import logging
 
 
-log = logging.getLogger('pic.repo')
+log = logging.getLogger('pic.index')
 
 class PictureAlreadyIndexedError(Exception):
     def __init__(self, pic):
@@ -21,15 +22,6 @@ class PictureAlreadyIndexedError(Exception):
     def __repr__(self):
         return "PictureAlreadyIndexedError(%s)" % self.pic
 
-class PictureNotIndexedError(KeyError):
-    def __init__(self, pic):
-        KeyError.__init__(self, pic)
-        self.pic = pic
-    def __str__(self):
-        return "%s not in index" % self.pic
-    def __repr__(self):
-        return "PictureNotIndexedError(%s)" % self.pic
-
 class IndexParsingError(Exception):
     def __init__(self, exp):
         Exception.__init__(self)
@@ -38,76 +30,90 @@ class IndexParsingError(Exception):
         return "Error parsing index: %s" % str(self.exp)
 
 
-class PictureIndex(object):
+class PictureIndex(collections.MutableMapping):
     """
     PictureClerk repository
     """
-    def __init__(self, index=dict()):
-        self.index = index
+    def __init__(self, d=None):
+        if not d:
+            d = dict()
+        self._index = d
 
     def __repr__(self):
-        return "PictureIndex(%s)" % self.index
+        return "PictureIndex(%s)" % self._index
 
     def __str__(self):
         return repr(self)
 
-    def __eq__(self, other):
-        return self.index == other.index
+    def __getitem__(self, key):
+        return self._index[key]
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
+    def __setitem__(self, key, value):
+        self._index[key] = value
 
-    def add_picture(self, pic):
+    def __delitem__(self, key):
+        del self._index[key]
+
+    def __len__(self):
+        return len(self._index)
+
+    def __iter__(self):
+        yield self._index
+
+    def __contains__(self, key):
+        return key in self._index
+
+    def __eq__(self, o):
+        if isinstance(o, PictureIndex):
+            return self._index == o._index
+        else:
+            return False
+
+    def __ne__(self, o):
+        return not self == o
+
+    def add(self, pic):
         key = pic.filename
-        if key in self.index:
+        if key in self._index:
             raise PictureAlreadyIndexedError(pic.filename)
         log.info("Adding %s.", pic.filename)
-        self.index[key] = pic
+        self._index[key] = pic
 
-    def add_pictures(self, pics):
+    def add_many(self, pics):
         for pic in pics:
-            try:
-                self.add_picture(pic)
-            except PictureAlreadyIndexedError as paie:
-                log.info("%s already in index", paie.pic)
+            self.add(pic)
 
-    def get_pictures_iter(self):
-        return self.index.itervalues()
 
-    def get_pictures(self):
-        return list(self.get_pictures_iter())
+    def iterpics(self):
+        return self._index.itervalues()
 
-    def get_picture_by_filename(self, filename):
-        log.info("Fetching %s from repository.", filename)
-        try:
-            return self.index[filename]
-        except KeyError:
-            raise PictureNotIndexedError(filename)
+    def pics(self):
+        return list(self.iterpics())
 
-    def update_picture(self, pic):
+    def replace(self, pic):
         key = pic.filename
-        if key not in self.index:
-            raise PictureNotIndexedError(pic.filename)
-        log.info("Updating %s.", pic.filename)
-        self.index[key] = pic
+        if key not in self._index:
+            raise KeyError(pic.filename)
+        log.info("Replacing %s.", pic.filename)
+        self._index[key] = pic
 
     def read(self, fh):
-        """Load picture index from supplied file handle.
+        """Load picture _index from supplied file handle.
         
         Arguments:
-        fh -- readable file handle pointing to index file
+        fh -- readable file handle pointing_indexndex file
         
         Raises:
-        IndexParsingError if index can not be unpickled
+        IndexParsingError_indexndex can not be unpickled
         
         """
         try:
-            self.index = pickle.load(fh)
+            self._index = pickle.load(fh)
         except (pickle.UnpicklingError, EOFError, KeyError) as e:
             raise IndexParsingError(e)
 
     def write(self, fh):
-        """Dump picture index to supplied file handle.
+        """Dump picture _index to supplied file handle.
         
         Arguments:
         
@@ -116,4 +122,4 @@ class PictureIndex(object):
         """
         # @TODO: use human-readable & portable format/store instead of pickle
         #        e.g. json, sqlite
-        pickle.dump(self.index, fh)
+        pickle.dump(self._index, fh)

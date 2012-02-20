@@ -116,7 +116,7 @@ class Repo(object):
         try:
             src.connect()
             dest.disconnect()
-            for picture in src_repo.index.get_pictures():
+            for picture in src_repo.index.iterpics():
                 for fname in picture.get_filenames():
                     src.copy(fname, dest, dest_path=fname)
         finally:

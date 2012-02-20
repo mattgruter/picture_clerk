@@ -52,7 +52,7 @@ class App(object):
         self.init_repo_logging(self.repo.config['logging.file'],
                                self.repo.config['logging.format'])
         pics = [Picture(path) for path in paths if os.path.exists(path)]
-        self.index.add_pictures(pics)
+        self.index.add_many(pics)
 
         # process pictures                
         if process_enabled:
@@ -79,7 +79,7 @@ class App(object):
         self.index = self.repo.index
         self.init_repo_logging(self.repo.config['logging.file'],
                                self.repo.config['logging.format'])
-        for pic in sorted(self.index.get_pictures_iter()):
+        for pic in sorted(self.index.iterpics()):
             print pic
 
     def parse_command_line(self):
