@@ -122,6 +122,4 @@ class PictureIndex(collections.MutableMapping):
         fh -- writable file handle
 
         """
-        # @TODO: use human-readable & portable format/store instead of pickle
-        #        e.g. json, sqlite
         pickle.dump(self._index, fh)
