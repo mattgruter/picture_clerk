@@ -117,9 +117,15 @@ class Picture(object):
     def list_sidecars(self):
         return self._sidecars
 
+    def get_sidecar_filenames(self):
+        return [sidecar.path for sidecar in self.list_sidecars()]
+
     def get_thumbnails(self):
         return [sidecar for sidecar in self.list_sidecars()
                     if sidecar.content_type.lower() == "thumbnail"]
+
+    def get_thumbnail_filenames(self):
+        return [thumbnail.path for thumbnail in self.get_thumbnails()]
 
 
 class Sidecar(object):
