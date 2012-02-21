@@ -6,6 +6,7 @@
 
 """
 import os
+import sys
 import optparse
 import logging
 
@@ -66,14 +67,25 @@ class App(object):
         log.info("Saving index to file.")
         repo.save_to_disk()
 
-    def list_pics(self):
-        """Return list of pictures in repository."""
+    def list_pics(self, mode):
+        """Return information on pictures in repository."""
         repo = Repo.load_from_disk(self.connector)
-        self.index = repo.index
         self.init_repo_logging(repo.config['logging.file'],
                                repo.config['logging.format'])
-
-        return '\n'.join(sorted((str(pic) for pic in self.index.pics())))
+        if mode == "all":
+            return '\n'.join(('%s' % str(pic)
+                              for pic in repo.index.pics()))
+        elif mode == "sidecars":
+            return '\n'.join(('\n'.join(pic.get_sidecar_filenames())
+                              for pic in repo.index.pics()))
+        elif mode == "thumbnails":
+            return '\n'.join(('\n'.join(pic.get_thumbnail_filenames())
+                              for pic in repo.index.pics()))
+        elif mode == "checksums":
+            return '\n'.join(('%s *%s' % (pic.checksum, pic.filename)
+                              for pic in repo.index.pics()))
+        else:
+            self.exit_with_error("Invalid list command: %s" % mode)
 
     def parse_command_line(self):
         """Parse command line (sys.argv) and return the parsed args & opts.
@@ -84,11 +96,17 @@ class App(object):
         verbosity -- the desired logging verbosity
         
         """
-        usage = "Usage: %prog [-v|--verbose] <command> [<args>]\n\n"\
-        "Commands:\n"\
-        "  add     add picture files to the repository\n"\
-        "  init    create an empty repository\n"\
-        "  list    list of pictures in repository"
+        usage = ("Usage: %prog [<options>] <command> [<args>]\n\n"
+        "Commands:\n"
+        "  init           create an empty repository\n"
+        "  add <files>    add picture files to the repository\n"
+        "  list <mode>    list pictures in repository\n\n"
+        "List modes:\n"
+        "  all (default)  print all available information about the pictures\n"
+        "  thumbnails     print paths of all thumbnail pictures\n"
+        "  sidecars       print paths of all sidecar files\n"
+        "  checksums      print SHA1 checksums (output readable by sha1sum)")
+
         parser = optparse.OptionParser(usage)
         parser.add_option("-v", "--verbose", dest="verbosity", action="count",
                           help="increase verbosity (also multiple times)")
@@ -156,16 +174,22 @@ class App(object):
         elif cmd == "add":
             app.add_pics(args, proc_enabled, recipe)
         elif cmd == "list":
-            app.list_pics()
+            if not args:
+                print app.list_pics(mode="all")
+            else:
+                print app.list_pics(mode=args[0])
         else:
-            log.error("invalid command: %s" % cmd)
+            msg = "Invalid command: '%s'" % cmd
+            app.exit_with_error(msg)
 
         # clean up
         logging.shutdown()
 
+    def exit_with_error(self, msg=""):
+        log.error(msg)
+        sys.exit(-1)
 
 if __name__ == "__main__":
-    import sys
     try:
         App.main()
     except KeyboardInterrupt:
