@@ -75,10 +75,27 @@ class Picture(object):
         return rtn
 
     def __repr__(self):
-        return str(self)
+        return "Picture('%s')" % self.filename
 
-    def __cmp__(self, other):
-        return cmp(self.filename, other.filename)
+    def __eq__(self, o):
+        if isinstance(o, Picture):
+            return self.filename == o.filename
+        return False
+
+    def __ne__(self, o):
+        return not self == o
+
+    def __lt__(self, o):
+        return self.filename < o.filename
+
+    def __le__(self, o):
+        return self.filename <= o.filename
+
+    def __gt__(self, o):
+        return self.filename > o.filename
+
+    def __ge__(self, o):
+        return self.filename >= o.filename
 
     def get_filenames(self):
         return [self.filename] + [sidecar.path for sidecar in self._sidecars]
