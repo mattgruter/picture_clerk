@@ -7,12 +7,11 @@
 """
 import os
 import sys
-import optparse
 import logging
 
 import config
 
-from connector import Connector, LocalConnector
+from connector import LocalConnector
 from recipe import Recipe
 from repo import Repo
 from picture import Picture
@@ -84,52 +83,6 @@ class App(object):
         elif mode == "checksums":
             return '\n'.join(('%s *%s' % (pic.checksum, pic.filename)
                               for pic in repo.index.pics()))
-        else:
-            self.exit_with_error("Invalid list command: %s" % mode)
-
-    def parse_command_line(self):
-        """Parse command line (sys.argv) and return the parsed args & opts.
-        
-        Returns:
-        cmd       -- PictureClerk command (e.g. init, add, list)
-        args      -- CLI positional arguments (excluding cmd)
-        verbosity -- the desired logging verbosity
-        
-        """
-        usage = ("Usage: %prog [<options>] <command> [<args>]\n\n"
-        "Commands:\n"
-        "  init           create an empty repository\n"
-        "  add <files>    add picture files to the repository\n"
-        "  list <mode>    list pictures in repository\n\n"
-        "List modes:\n"
-        "  all (default)  print all available information about the pictures\n"
-        "  thumbnails     print paths of all thumbnail pictures\n"
-        "  sidecars       print paths of all sidecar files\n"
-        "  checksums      print SHA1 checksums (output readable by sha1sum)")
-
-        parser = optparse.OptionParser(usage)
-        parser.add_option("-v", "--verbose", dest="verbosity", action="count",
-                          help="increase verbosity (also multiple times)")
-
-        # Options for the 'clone' command
-        add_opts = optparse.OptionGroup(parser, "Add options",
-                                 "Options for the add command.")
-        add_opts.add_option("-n", "--noprocess",
-                              action="store_false", dest="process_enabled",
-                              help="do not process added files")
-        add_opts.add_option("-r", "--recipe",
-                              action="store", dest="process_recipe",
-                              metavar="RECIPE",
-                              help="comma sep. list of processing instructions")
-        parser.add_option_group(add_opts)
-
-        parser.set_defaults(process_enabled=True, process_recipe=None)
-
-        opt, args = parser.parse_args()
-        if not args:
-            parser.error("no command given")
-        cmd = args.pop(0)
-        return cmd, args, opt.verbosity, opt.process_enabled, opt.process_recipe
 
     def init_logging(self, verbosity):
         """Configure logging and add console logger with supplied verbosity.
@@ -161,36 +114,3 @@ class App(object):
             formatter = logging.Formatter(log_format)
             file_handler.setFormatter(formatter)
             logging.getLogger().addHandler(file_handler)
-
-    @staticmethod
-    def main():
-        connector = Connector.from_string('.')
-        app = App(connector)
-        cmd, args, verbosity, proc_enabled, recipe = app.parse_command_line()
-        app.init_logging(verbosity)
-
-        if cmd == "init":
-            app.init()
-        elif cmd == "add":
-            app.add_pics(args, proc_enabled, recipe)
-        elif cmd == "list":
-            if not args:
-                print app.list_pics(mode="all")
-            else:
-                print app.list_pics(mode=args[0])
-        else:
-            msg = "Invalid command: '%s'" % cmd
-            app.exit_with_error(msg)
-
-        # clean up
-        logging.shutdown()
-
-    def exit_with_error(self, msg=""):
-        log.error(msg)
-        sys.exit(-1)
-
-if __name__ == "__main__":
-    try:
-        App.main()
-    except KeyboardInterrupt:
-        sys.exit(None)

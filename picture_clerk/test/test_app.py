@@ -18,7 +18,7 @@ from testlib import MockConnector
 from app import App
 
 
-class Test(unittest.TestCase):
+class TestApp(unittest.TestCase):
 
     def setUp(self):
         self.connector = MockConnector(urlparse.urlparse('/basedir/repo/'))
@@ -63,8 +63,7 @@ class Test(unittest.TestCase):
             self.assertIn(old_pic.filename, r.index)
         self.assertEqual(r.config, self.default_conf) # config should not change
 
-    @mock.patch('sys.exit')
-    def test_list_pics(self, mock_exit):
+    def test_list_pics(self):
         repo.Repo.create_on_disk(self.connector,
                                  self.default_conf,
                                  self.index)
@@ -89,10 +88,6 @@ class Test(unittest.TestCase):
         self.assertSequenceEqual(app.list_pics("checksums").split('\n'),
                                  ['%s *%s' % (pic.checksum, pic.filename)
                                   for pic in sorted(self.pics)])
-
-        # list with invalid mode
-        app.list_pics("invalidmode")
-        mock_exit.assert_called_with(-1)
 
 
 if __name__ == "__main__":
