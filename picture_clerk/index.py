@@ -85,10 +85,12 @@ class PictureIndex(collections.MutableMapping):
 
 
     def iterpics(self):
+        """Return iterator over all pictures."""
         return self._index.itervalues()
 
     def pics(self):
-        return list(self.iterpics())
+        """Return list over all pictures sorted by filename."""
+        return sorted(self.iterpics())
 
     def replace(self, pic):
         key = pic.filename

@@ -18,7 +18,8 @@ class BasicTests(unittest.TestCase):
 
     def setUp(self):
         self.mock_pic = mock.Mock()
-        self.index = {'pic1': 'file1', 'pic2': 'file2', 'pic3': 'file3'}
+        self.index = {'pic1': 'file1', 'pic4': 'file4', 'pic0': 'file0',
+                      'pic2': 'file2', 'pic3': 'file3'}
 
     def test_type(self):
         mock_index = mock.Mock()
@@ -51,8 +52,11 @@ class BasicTests(unittest.TestCase):
 
     def test_iterpics(self):
         pi = PictureIndex(self.index)
-        self.assertSequenceEqual(pi.pics(),
-                                 list(pi.iterpics()))
+        self.assertItemsEqual(list(pi.iterpics()), self.index.values())
+
+    def test_pics(self):
+        pi = PictureIndex(self.index)
+        self.assertSequenceEqual(pi.pics(), sorted(self.index.values()))
 
     def test_get(self):
         pi = PictureIndex(self.index)
