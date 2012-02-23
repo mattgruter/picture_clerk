@@ -6,101 +6,152 @@
 
 """
 import logging
-import optparse
+import argparse
 import signal
 import sys
 
 from app import App
 from connector import Connector
 
+
 log = logging.getLogger('pic.cli')
 
 class CLI(object):
     """PictureClerk's command line interface."""
 
-    def parse_command_line(self, args):
-        """Parse command line (sys.argv) and return the parsed args & opts.
+    def __init__(self):
+        self.app = None
+
+    def setup_signal_handlers(self):
+        signal.signal(signal.SIGINT, self.handle_sigint)
+        signal.signal(signal.SIGTERM, self.handle_sigterm)
+
+    def handle_sigint(self, signum, frame):
+        print("Caught signal INT")  # don't use logging due to possible deadlock
+        self.shutdown(exit_code=128 + signum)
+
+    def handle_sigterm(self, signum, frame):
+        print("Caught signal TERM") # don't use logging due to possible deadlock
+        self.shutdown(exit_code=128 + signum)
+
+    def setup_logging(self, verbosity):
+        """Configure logging and add console logger with supplied verbosity.
         
-        Returns:
-        cmd       -- PictureClerk command (e.g. init, add, list)
-        args      -- CLI positional arguments (excluding cmd)
-        verbosity -- the desired logging verbosity
+        Arguments:
+        verbosity -- console loglevel (0 -> warning, 1 -> info, 2 -> debug)
         
         """
-        usage = ("Usage: %prog [<options>] <command> [<args>]\n\n"
-        "Commands:\n"
-        "  init           create an empty repository\n"
-        "  add <files>    add picture files to the repository\n"
-        "  list <mode>    list pictures in repository\n\n"
-        "List modes:\n"
-        "  all (default)  print all available information about the pictures\n"
-        "  thumbnails     print paths of all thumbnail pictures\n"
-        "  sidecars       print paths of all sidecar files\n"
-        "  checksums      print SHA1 checksums (output readable by sha1sum)")
+        root_logger = logging.getLogger()
+        root_logger.setLevel(logging.DEBUG)
+        formatter = logging.Formatter('%(message)s')
 
-        parser = optparse.OptionParser(usage)
-        parser.add_option("-v", "--verbose", dest="verbosity", action="count",
-                          help="increase verbosity (also multiple times)")
+        # stdout console logger
+        log_level = logging.WARNING  # default
+        if verbosity == 1:
+            log_level = logging.INFO
+        elif verbosity >= 2:
+            log_level = logging.DEBUG
+        console = logging.StreamHandler(sys.stdout)
+        console.setLevel(log_level)
+        console.setFormatter(formatter)
+        root_logger.addHandler(console)
 
-        # Options for the 'clone' command
-        add_opts = optparse.OptionGroup(parser, "Add options",
-                                 "Options for the add command.")
-        add_opts.add_option("-n", "--noprocess",
-                              action="store_false", dest="process_enabled",
-                              help="do not process added files")
-        add_opts.add_option("-r", "--recipe",
-                              action="store", dest="process_recipe",
-                              metavar="RECIPE",
-                              help="comma sep. list of processing instructions")
-        parser.add_option_group(add_opts)
+    def dispatch_args(self, app, args):
+        args.func(app, args)
 
-        parser.set_defaults(process_enabled=True, process_recipe=None)
+    def handle_init_cmd(self, app, args):
+        app.init()
 
-        opt, args = parser.parse_args(args)
-        if not args:
-            parser.error("no command given")
-        cmd = args.pop(0)
-        return cmd, args, opt.verbosity, opt.process_enabled, opt.process_recipe
+    def handle_add_cmd(self, app, args):
+        app.add_pics(args.files, args.process, args.recipe)
 
+    def handle_list_cmd(self, app, args):
+        print app.list_pics(args.mode)
 
-    def main(self, args):
-        signal.signal(signal.SIGINT, self.signal_handler)
+    def handle_test_cmd(self, app, args):
+        print "Testing..."
+        log.info("Starting endless loop.")
+        while True:
+            pass
 
-        connector = Connector.from_string('.')
-        cmd, args, verbosity, proc_enabled, recipe = self.parse_command_line(args[1:])
-        app = App(connector)
-        app.init_logging(verbosity)
+    def parse_args(self, args):
+        """Parse command line arguments and return result.
+        
+        Arguments:
+        args -- list of command line arguments (e.g. sys.argv[1:])
+        
+        """
+        descr = "PictureClerk - The little helper for your picture workflow."
+        parser = argparse.ArgumentParser(description=descr)
+        subparsers = parser.add_subparsers(title='commands', dest='cmd')
 
-        if cmd == "init":
-            app.init()
-        elif cmd == "add":
-            app.add_pics(args, proc_enabled, recipe)
-        elif cmd == "list":
-            if not args:
-                print app.list_pics(mode="all")
-            else:
-                print app.list_pics(mode=args[0])
-        elif cmd == "test":
-            import time
-            while True:
-                time.sleep(1)
-        else:
-            msg = "Invalid command: '%s'" % cmd
-            self.exit_with_error(msg)
+        # global arguments
+        parser.add_argument(
+            '-v', '--verbose',
+            dest='verbosity',
+            action='count',
+            help="more verbose output (can be supplied multiple times)")
 
-        # clean up
+        # 'init' subcommand
+        parser_init = subparsers.add_parser(
+            'init',
+            help="initialize empty repository")
+        parser_init.set_defaults(func=self.handle_init_cmd)
+
+        # 'add' subcommand
+        parser_add = subparsers.add_parser(
+            'add',
+            help="add picture files to repository")
+        parser_add.add_argument(
+            '--noprocess', '-n',
+            dest='process',
+            default=True,
+            action='store_false',
+            help="only add files to repository without processing")
+        parser_add.add_argument(
+            '--recipe', '-r',
+            dest='recipe',
+            nargs=1,
+            help="processing instructions (comma separated list)")
+        parser_add.add_argument(
+            'files',
+            metavar='file',
+            nargs='+',
+            help="picture files to add")
+        parser_add.set_defaults(func=self.handle_add_cmd)
+
+        # 'list' subcommand
+        parser_list = subparsers.add_parser(
+            'list',
+            help="print information about repository")
+        parser_list.add_argument(
+            'mode',
+            nargs='?',
+            default='all',
+            choices=['all', 'thumbnails', 'sidecars', 'checksums'],
+            help="type of information to print (default: 'all')")
+        parser_list.set_defaults(func=self.handle_list_cmd)
+
+        # 'test' subcommand
+        parser_test = subparsers.add_parser(
+            'test',
+            help="testing CLI")
+        parser_test.set_defaults(func=self.handle_test_cmd)
+        return parser.parse_args(args)
+
+    def main(self, argv):
+        args = self.parse_args(argv[1:])
+        self.setup_signal_handlers()
+        self.setup_logging(args.verbosity)
+        self.app = App(Connector.from_string('.'))
+        self.dispatch_args(self.app, args)
+        self.shutdown(0)
+
+    def shutdown(self, exit_code):
+        self.app.shutdown()
         logging.shutdown()
+        sys.exit(exit_code)
 
-    def exit(self, code):
-        sys.exit(code)
-
-    def exit_with_error(self, msg=""):
-        log.error(msg)
-        self.exit(-1)
-
-    def signal_handler(self, signum, frame):
-        log.info('Caught signal %s' % signum)
-        self.exit(128 + signum)
 
 if __name__ == "__main__":
     CLI().main(sys.argv)

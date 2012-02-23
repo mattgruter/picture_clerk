@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 @author: Matthias Grueter <matthias@grueter.name>
 @copyright: Copyright (c) 2012 Matthias Grueter
@@ -84,27 +83,6 @@ class App(object):
             return '\n'.join(('%s *%s' % (pic.checksum, pic.filename)
                               for pic in repo.index.pics()))
 
-    def init_logging(self, verbosity):
-        """Configure logging and add console logger with supplied verbosity.
-        
-        Arguments:
-        verbosity -- console loglevel (0 -> warning, 1 -> info, 2 -> debug)
-        
-        """
-        root_logger = logging.getLogger()
-        root_logger.setLevel(logging.DEBUG)
-
-        # stdout console logger
-        log_level = logging.WARNING  # default
-        if verbosity == 1:
-            log_level = logging.INFO
-        elif verbosity >= 2:
-            log_level = logging.DEBUG
-        console = logging.StreamHandler(sys.stdout)
-        console.setLevel(log_level)
-        formatter = logging.Formatter('%(message)s')
-        console.setFormatter(formatter)
-        root_logger.addHandler(console)
 
     def init_repo_logging(self, log_file, log_format):
         # repo file logging (only if repo is local)
@@ -114,3 +92,6 @@ class App(object):
             formatter = logging.Formatter(log_format)
             file_handler.setFormatter(formatter)
             logging.getLogger().addHandler(file_handler)
+
+    def shutdown(self):
+        log.info("Exiting...")
