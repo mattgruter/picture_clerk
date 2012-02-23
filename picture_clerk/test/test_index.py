@@ -82,6 +82,18 @@ class BasicTests(unittest.TestCase):
         pi = PictureIndex(self.index)
         self.assertRaises(KeyError, pi.replace, self.mock_pic)
 
+    def test_find_by_filename(self):
+        pi = PictureIndex()
+        pic1 = mock.Mock()
+        pic1.get_filenames.return_value = ['pic1_file1', 'pic1_file2']
+        pic2 = mock.Mock()
+        pic2.get_filenames.return_value = ['pic2_file1', 'shared_file']
+        pic3 = mock.Mock()
+        pic3.get_filenames.return_value = ['pic3_file1', 'shared_file']
+        pi.add_many([pic1, pic2, pic3])
+        self.assertEqual(pi.find_by_filename('pic1_file1'), [pic1])
+        self.assertItemsEqual(pi.find_by_filename('shared_file'), [pic2, pic3])
+
 
 class ReadWriteTest(unittest.TestCase):
 

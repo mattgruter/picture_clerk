@@ -85,7 +85,6 @@ class PictureIndex(collections.MutableMapping):
         for pic in pics:
             self.add(pic)
 
-
     def iterpics(self):
         """Return iterator over all pictures."""
         return self._index.itervalues()
@@ -101,6 +100,20 @@ class PictureIndex(collections.MutableMapping):
             raise KeyError(pic.filename)
         log.info("Replacing %s.", pic.filename)
         self._index[key] = pic
+
+    def find_by_filename(self, fname):
+        """Return list of pictures to which supplied filename belongs.
+        
+        All files associated to a picture are searched (including sidecar files)
+        
+        Arguments:
+        filename -- name of the file to search for
+        
+        Return:
+        List of pictures that are associated with the supplied filename.
+        
+        """
+        return [pic for pic in self.iterpics() if fname in pic.get_filenames()]
 
     def read(self, fh):
         """Load picture _index from supplied file handle.
