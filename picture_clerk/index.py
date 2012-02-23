@@ -73,6 +73,7 @@ class PictureIndex(collections.MutableMapping):
         return not self == o
 
     def add(self, pic):
+        """Add supplied pic to index. Raises PictureAlreadyIndexedError"""
         key = pic.filename
         if key in self._index:
             raise PictureAlreadyIndexedError(pic.filename)
@@ -80,6 +81,7 @@ class PictureIndex(collections.MutableMapping):
         self._index[key] = pic
 
     def add_many(self, pics):
+        """Add list of pictures to index."""
         for pic in pics:
             self.add(pic)
 
@@ -93,6 +95,7 @@ class PictureIndex(collections.MutableMapping):
         return sorted(self.iterpics())
 
     def replace(self, pic):
+        """Update index with pic. Raise KeyError if pic not already in index."""
         key = pic.filename
         if key not in self._index:
             raise KeyError(pic.filename)
@@ -118,7 +121,6 @@ class PictureIndex(collections.MutableMapping):
         """Dump picture _index to supplied file handle.
         
         Arguments:
-        
         fh -- writable file handle
 
         """
