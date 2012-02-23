@@ -73,17 +73,21 @@ class PictureIndex(collections.MutableMapping):
         return not self == o
 
     def add(self, pic):
-        """Add supplied pic to index. Raises PictureAlreadyIndexedError"""
-        key = pic.filename
-        if key in self._index:
-            raise PictureAlreadyIndexedError(pic.filename)
-        log.info("Adding %s.", pic.filename)
-        self._index[key] = pic
-
-    def add_many(self, pics):
-        """Add list of pictures to index."""
-        for pic in pics:
-            self.add(pic)
+        """Add supplied picture or list of pictures to index.
+        
+        Raises:
+        PictureAlreadyIndexedError
+        
+        """
+        if isinstance(pic, collections.Iterable):
+            for item in pic:
+                self.add(item)
+        else:
+            key = pic.filename
+            if key in self._index:
+                raise PictureAlreadyIndexedError(pic.filename)
+            log.info("Adding %s.", pic.filename)
+            self._index[key] = pic
 
     def iterpics(self):
         """Return iterator over all pictures."""

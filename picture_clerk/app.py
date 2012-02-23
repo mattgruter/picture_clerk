@@ -46,7 +46,7 @@ class App(object):
         self.init_repo_logging(repo.config['logging.file'],
                                repo.config['logging.format'])
         pics = [Picture(path) for path in paths if os.path.exists(path)]
-        repo.index.add_many(pics)
+        repo.index.add(pics)
 
         # process pictures                
         if process_enabled:

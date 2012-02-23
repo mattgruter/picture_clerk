@@ -46,7 +46,7 @@ class FactoryTests(unittest.TestCase):
     def setUp(self):
         self.connector = MockConnector(urlparse.urlparse('/baseurl/repo/'))
         self.pi = index.PictureIndex()
-        self.pi.add_many((Picture('pic1'), Picture('pic2'), Picture('pic3')))
+        self.pi.add((Picture('pic1'), Picture('pic2'), Picture('pic3')))
         self.conf = config.Config(config.REPO_CONFIG)
         self.conf['index.file'] = 'mock-index-path'
 

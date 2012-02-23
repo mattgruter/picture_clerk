@@ -46,7 +46,7 @@ class BasicTests(unittest.TestCase):
     def test_add_many(self):
         pi = PictureIndex(self.index)
         mock_pics = [mock.Mock(), mock.Mock(), mock.Mock()]
-        pi.add_many(mock_pics)
+        pi.add(mock_pics)
         for mock_pic in mock_pics:
             self.assertIn(mock_pic, pi.pics())
 
@@ -85,7 +85,7 @@ class BasicTests(unittest.TestCase):
     def test_remove(self):
         pi = PictureIndex(self.index)
         mock_pics = [mock.Mock(), mock.Mock(), mock.Mock()]
-        pi.add_many(mock_pics)
+        pi.add(mock_pics)
         pi.remove(mock_pics[1])
         self.assertNotIn(mock_pics[1], pi.pics())
         self.assertIn(mock_pics[0], pi.pics())
@@ -94,7 +94,7 @@ class BasicTests(unittest.TestCase):
     def test_remove_many(self):
         pi = PictureIndex(self.index)
         mock_pics = [mock.Mock(), mock.Mock(), mock.Mock()]
-        pi.add_many(mock_pics)
+        pi.add(mock_pics)
         pi.remove(mock_pics[:2])
         self.assertNotIn(mock_pics[0], pi.pics())
         self.assertNotIn(mock_pics[1], pi.pics())
@@ -108,7 +108,7 @@ class BasicTests(unittest.TestCase):
         pic2.get_filenames.return_value = ['pic2_file1', 'shared_file']
         pic3 = mock.Mock()
         pic3.get_filenames.return_value = ['pic3_file1', 'shared_file']
-        pi.add_many([pic1, pic2, pic3])
+        pi.add([pic1, pic2, pic3])
         self.assertEqual(pi.find_by_filename('pic1_file1'), [pic1])
         self.assertItemsEqual(pi.find_by_filename('shared_file'), [pic2, pic3])
 

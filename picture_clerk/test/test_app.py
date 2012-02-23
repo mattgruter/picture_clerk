@@ -27,7 +27,7 @@ class Test(unittest.TestCase):
         for pic in self.pics:
             pic.checksum = hashlib.sha1(pic.filename).hexdigest()
         self.index = index.PictureIndex()
-        self.index.add_many(self.pics)
+        self.index.add(self.pics)
         self.default_conf = config.Config(config.REPO_CONFIG)
 
     def tearDown(self):
