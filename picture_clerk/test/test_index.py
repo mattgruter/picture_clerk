@@ -82,6 +82,24 @@ class BasicTests(unittest.TestCase):
         pi = PictureIndex(self.index)
         self.assertRaises(KeyError, pi.replace, self.mock_pic)
 
+    def test_remove(self):
+        pi = PictureIndex(self.index)
+        mock_pics = [mock.Mock(), mock.Mock(), mock.Mock()]
+        pi.add_many(mock_pics)
+        pi.remove(mock_pics[1])
+        self.assertNotIn(mock_pics[1], pi.pics())
+        self.assertIn(mock_pics[0], pi.pics())
+        self.assertIn(mock_pics[2], pi.pics())
+
+    def test_remove_many(self):
+        pi = PictureIndex(self.index)
+        mock_pics = [mock.Mock(), mock.Mock(), mock.Mock()]
+        pi.add_many(mock_pics)
+        pi.remove(mock_pics[:2])
+        self.assertNotIn(mock_pics[0], pi.pics())
+        self.assertNotIn(mock_pics[1], pi.pics())
+        self.assertIn(mock_pics[2], pi.pics())
+
     def test_find_by_filename(self):
         pi = PictureIndex()
         pic1 = mock.Mock()

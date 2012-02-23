@@ -101,6 +101,15 @@ class PictureIndex(collections.MutableMapping):
         log.info("Replacing %s.", pic.filename)
         self._index[key] = pic
 
+    def remove(self, pic):
+        """Remove supplied picture or list of pictures from index."""
+        if isinstance(pic, collections.Iterable):
+            for item in pic:
+                self.remove(item)
+        else:
+            log.info("Removing %s.", pic.filename)
+            del self._index[pic.filename]
+
     def find_by_filename(self, fname):
         """Return list of pictures to which supplied filename belongs.
         
