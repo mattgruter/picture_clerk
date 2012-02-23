@@ -35,19 +35,22 @@ class MockConnector(Connector):
         self.buffers = collections.defaultdict(MockFile)
 
     def _connect(self):
-        return
+        pass
 
     def _disconnect(self):
-        return
+        pass
 
     def _exists(self, path):
         return True
 
     def _mkdir(self, path, mode):
-        return
+        pass
 
     def _open(self, path, mode):
         return self.buffers[path]
+
+    def _remove(self, path):
+        pass
 
     def opened(self, rel_path):
         return self._rel2abs(rel_path) in self.buffers
