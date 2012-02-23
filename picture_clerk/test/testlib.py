@@ -33,6 +33,7 @@ class MockConnector(Connector):
     def __init__(self, url):
         Connector.__init__(self, url)
         self.buffers = collections.defaultdict(MockFile)
+        self.removed_files = []
 
     def _connect(self):
         pass
@@ -50,10 +51,13 @@ class MockConnector(Connector):
         return self.buffers[path]
 
     def _remove(self, path):
-        pass
+        self.removed_files.append(path)
 
     def opened(self, rel_path):
         return self._rel2abs(rel_path) in self.buffers
+
+    def removed(self, rel_path):
+        return self._rel2abs(rel_path) in self.removed_files
 
     def get_file(self, rel_path):
         return self.buffers[self._rel2abs(rel_path)]

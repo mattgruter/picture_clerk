@@ -65,6 +65,36 @@ class App(object):
         log.info("Saving index to file.")
         repo.save_to_disk()
 
+    def remove_pics(self, files):
+        """Remove pictures associated with supplied files from repo & disk."""
+        repo = Repo.load_from_disk(self.connector)
+        self.init_repo_logging(repo.config['logging.file'],
+                               repo.config['logging.format'])
+
+        # find all pictures that refer to given files and remove from index
+        pics = [pic for fname in files
+                    for pic in repo.index.find_by_filename(fname)]
+        repo.index.remove(pics)
+
+        # remove all files associated with above pictures
+        picfiles = (picfile for pic in pics
+                            for picfile in pic.get_filenames())
+
+        self.connector.connect()
+        for picfile in picfiles:
+            try:
+                self.connector.remove(picfile)
+            except OSError, e:
+                if "no such file" in e.message.lower():
+                    # ignore exceptions about missing (= already removed) files
+                    log.debug("No such file: %s" % e.filename)
+                else:
+                    raise   # re-raise all other (e.g. permission error)
+        self.connector.disconnect()
+
+        log.info("Saving index to file.")
+        repo.save_to_disk()
+
     def list_pics(self, mode):
         """Return information on pictures in repository."""
         repo = Repo.load_from_disk(self.connector)

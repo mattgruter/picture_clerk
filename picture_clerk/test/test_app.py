@@ -26,6 +26,7 @@ class TestApp(unittest.TestCase):
                      for i in range(32, 10, -1)]
         for pic in self.pics:
             pic.checksum = hashlib.sha1(pic.filename).hexdigest()
+            pic.add_sidecar(pic.basename + '.thumb.jpg', 'thumbnail')
         self.index = index.PictureIndex()
         self.index.add(self.pics)
         self.default_conf = config.Config(config.REPO_CONFIG)
@@ -51,7 +52,6 @@ class TestApp(unittest.TestCase):
         repo.Repo.create_on_disk(self.connector,
                                      self.default_conf,
                                      self.index)
-
         app = App(self.connector)
         app.add_pics(('testfile1', 'testfile2'), process_enabled=False)
 
@@ -63,6 +63,31 @@ class TestApp(unittest.TestCase):
             self.assertIn(old_pic.filename, r.index)
         self.assertEqual(r.config, self.default_conf) # config should not change
 
+    def test_remove_pics(self):
+        repo.Repo.create_on_disk(self.connector,
+                                     self.default_conf,
+                                     self.index)
+        app = App(self.connector)
+        pics_to_remove = self.pics[2:5]
+        pics_remaining = self.pics[:2] + self.pics[5:]
+        app.remove_pics((pic.filename for pic in pics_to_remove))
+
+        # load repo from disk and check it's config & index
+        r = repo.Repo.load_from_disk(self.connector)
+        for pic in pics_to_remove:
+            self.assertNotIn(pic.filename, r.index)
+        for pic in pics_remaining:
+            self.assertIn(pic.filename, r.index)
+        self.assertEqual(r.config, self.default_conf) # config should not change
+
+        # check that correct files were removed
+        for pic in pics_to_remove:
+            for picfile in pic.get_filenames():
+                self.assertTrue(self.connector.removed(picfile))
+        for pic in pics_remaining:
+            for picfile in pic.get_filenames():
+                self.assertFalse(self.connector.removed(picfile))
+
     def test_list_pics(self):
         repo.Repo.create_on_disk(self.connector,
                                  self.default_conf,
@@ -70,9 +95,12 @@ class TestApp(unittest.TestCase):
         app = App(self.connector)
 
         # list all
-        self.assertSequenceEqual(app.list_pics("all").split('\n'),
-                                 [pic.filename
-                                  for pic in sorted(self.pics)])
+        list_all_template = "%s\n  Sidecar files:\n   thumbnail: %s"
+        list_all_expected = '\n'.join([(list_all_template %
+                                        (pic.filename,
+                                         pic.get_thumbnail_filenames()[0]))
+                                       for pic in sorted(self.pics)])
+        self.assertEqual(app.list_pics("all"), list_all_expected)
 
         # list thumbnails
         self.assertSequenceEqual(app.list_pics("thumbnails").split('\n'),

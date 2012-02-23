@@ -65,6 +65,9 @@ class CLI(object):
     def handle_add_cmd(self, app, args):
         app.add_pics(args.files, args.process, args.recipe)
 
+    def handle_remove_cmd(self, app, args):
+        app.remove_pics(args.files)
+
     def handle_list_cmd(self, app, args):
         print app.list_pics(args.mode)
 
@@ -117,8 +120,19 @@ class CLI(object):
             'files',
             metavar='file',
             nargs='+',
-            help="picture files to add")
+            help="picture file(s) to add")
         parser_add.set_defaults(func=self.handle_add_cmd)
+
+        # 'remove' subcommand
+        parser_remove = subparsers.add_parser(
+            'remove',
+            help="remove pictures from repository")
+        parser_remove.add_argument(
+            'files',
+            metavar='file',
+            nargs='+',
+            help="picture(s) to remove")
+        parser_remove.set_defaults(func=self.handle_remove_cmd)
 
         # 'list' subcommand
         parser_list = subparsers.add_parser(
@@ -137,6 +151,7 @@ class CLI(object):
             'test',
             help="testing CLI")
         parser_test.set_defaults(func=self.handle_test_cmd)
+
         return parser.parse_args(args)
 
     def main(self, argv):
