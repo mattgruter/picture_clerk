@@ -5,7 +5,6 @@
 
 """
 import os
-import sys
 import logging
 
 import config
@@ -15,6 +14,7 @@ from recipe import Recipe
 from repo import Repo
 from picture import Picture
 from pipeline import Pipeline
+from viewer import Viewer
 
 log = logging.getLogger('pic.app')
 
@@ -112,6 +112,19 @@ class App(object):
         elif mode == "checksums":
             return '\n'.join(('%s *%s' % (pic.checksum, pic.filename)
                               for pic in repo.index.pics()))
+
+    def view_pics(self, prog):
+        """Launch viewer program and keep track of pictures deleted within."""
+        repo = Repo.load_from_disk(self.connector)
+        self.init_repo_logging(repo.config['logging.file'],
+                               repo.config['logging.format'])
+        if not prog:
+            prog = repo.config['viewer.prog']
+        viewer = Viewer(prog)
+        del_pics = viewer.show([pic.get_thumbnail_filenames()[0]
+                                for pic in repo.index.pics()])
+
+        print del_pics
 
 
     def init_repo_logging(self, log_file, log_format):

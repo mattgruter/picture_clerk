@@ -71,6 +71,9 @@ class CLI(object):
     def handle_list_cmd(self, app, args):
         print app.list_pics(args.mode)
 
+    def handle_view_cmd(self, app, args):
+        app.view_pics(args.viewer)
+
     def handle_test_cmd(self, app, args):
         print "Testing..."
         log.info("Starting endless loop.")
@@ -106,13 +109,13 @@ class CLI(object):
             'add',
             help="add picture files to repository")
         parser_add.add_argument(
-            '--noprocess', '-n',
+            '-n', '--noprocess',
             dest='process',
             default=True,
             action='store_false',
             help="only add files to repository without processing")
         parser_add.add_argument(
-            '--recipe', '-r',
+            '--recipe',
             dest='recipe',
             nargs=1,
             help="processing instructions (comma separated list)")
@@ -145,6 +148,16 @@ class CLI(object):
             choices=['all', 'thumbnails', 'sidecars', 'checksums'],
             help="type of information to print (default: 'all')")
         parser_list.set_defaults(func=self.handle_list_cmd)
+
+        # 'view' subcommand
+        parser_view = subparsers.add_parser(
+            'view',
+            help="view pictures")
+        parser_view.add_argument(
+             '--viewer',
+             metavar='CMD',
+             help="program to use as picture viewer")
+        parser_view.set_defaults(func=self.handle_view_cmd)
 
         # 'test' subcommand
         parser_test = subparsers.add_parser(

@@ -80,6 +80,9 @@ XMP_SIDECAR_DIR = os.path.join(PIC_DIR, "xmp")
 # default processing instructions/recipe used if none defined at command line
 DEFAULT_RECIPE = "HashDigestWorker, ThumbWorker, AutorotWorker, MetadataWorker"
 
+# viewer
+VIEWER_CMD = "qiv -m -t"
+
 REPO_CONFIG = {
     'index.file': INDEX_FILE,
     'index.format_version': INDEX_FORMAT_VERSION,
@@ -91,6 +94,7 @@ REPO_CONFIG = {
     'logging.file': REPO_LOG_FILE,
     'logging.level': REPO_LOG_LEVEL,
     'logging.format': REPO_LOG_FORMAT,
+    'viewer.prog': VIEWER_CMD,
                }
 
 class Config(collections.MutableMapping):
