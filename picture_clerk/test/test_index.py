@@ -113,7 +113,7 @@ class BasicTests(unittest.TestCase):
         self.assertItemsEqual(pi.find_by_filename('shared_file'), [pic2, pic3])
 
 
-class ReadWriteTest(unittest.TestCase):
+class ReadWriteTests(unittest.TestCase):
 
     def setUp(self):
         self.fh = StringIO.StringIO() # file-like string buffer
