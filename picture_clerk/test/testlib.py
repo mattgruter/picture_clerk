@@ -7,10 +7,13 @@ Created on 2012/02/19
 
 """
 
-import StringIO
 import collections
+import hashlib
+import random
+import StringIO
 
 from connector import Connector
+from picture import Picture
 
 
 class MockFile(StringIO.StringIO):
@@ -63,4 +66,15 @@ class MockConnector(Connector):
         return self.buffers[self._rel2abs(rel_path)]
 
 
+class MockPicture(Picture):
 
+    def __init__(self, filename):
+        Picture.__init__(self, filename)
+        self.add_sidecar(self.basename + '.thumb.jpg', 'thumbnail')
+        self.checksums = hashlib.sha1(filename).hexdigest()
+
+    @classmethod
+    def create_many(cls, count, template='DSC_%04i.NEF'):
+        pics = [MockPicture(template % i) for i in range(count)]
+        random.shuffle(pics)    # randomize list order
+        return pics

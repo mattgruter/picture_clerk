@@ -73,9 +73,7 @@ class App(object):
 
     def remove_pics(self, files):
         """Remove pictures associated with supplied files from repo & disk."""
-        # find all pictures that refer to given files and remove from index
-        pics = [pic for fname in files
-                    for pic in self.repo.index.find_by_filename(fname)]
+        pics = [self.repo.index[fname] for fname in files]
         self.repo.index.remove(pics)
 
         # remove all files associated with above pictures
@@ -122,9 +120,8 @@ class App(object):
         if not prog:
             prog = repo.config['viewer.prog']
         v = Viewer(prog)
-        thumbs = [pic.get_thumbnail_filenames()[0] for pic in repo.index.pics()]
-        del_files = v.show(thumbs)
-        self.remove_pics(del_files)
+        deleted_pics = v.show(repo.index.pics())
+        self.remove_pics([pic.filename for pic in deleted_pics])
 
     def init_repo_logging(self, log_file, log_format):
         # repo file logging (only if repo is local)

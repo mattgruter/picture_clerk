@@ -7,25 +7,19 @@
 import unittest
 import mock
 import urlparse
-import hashlib
 
 import config
 import index
 import repo
-import picture
 
-from testlib import MockConnector
+from testlib import MockConnector, MockPicture
 from app import App
 
 
 def create_repo(connector):
     # test index
     pi = index.PictureIndex()
-    for i in range(32, 10, -1):
-        pic = picture.Picture('DSC_%04i.NEF' % i)
-        pic.add_sidecar(pic.basename + 'thumb.jpg', 'thumbnail')
-        pic.checksum = hashlib.sha1(pic.filename).hexdigest()
-        pi.add(pic)
+    pi.add(MockPicture.create_many(20))
 
     # test config
     conf = config.Config(config.REPO_CONFIG)
@@ -168,8 +162,6 @@ class ViewPicsTests(unittest.TestCase):
     def setUp(self):
         self.connector = MockConnector(urlparse.urlparse('/basedir/repo/'))
         self.repo = create_repo(self.connector)
-        self.thumbs = [pic.get_thumbnail_filenames()[0]
-                       for pic in self.repo.index.pics()]
 
     def tearDown(self):
         pass
@@ -182,7 +174,7 @@ class ViewPicsTests(unittest.TestCase):
         app.view_pics(prog=None)
 
         MockViewer.assert_called_once_with(self.repo.config['viewer.prog'])
-        mock_viewer_inst.show.assert_called_once_with(self.thumbs)
+        mock_viewer_inst.show.assert_called_once_with(self.repo.index.pics())
         mock_remove_pics.assert_called_once_with([])
 
     def test_supplied_prog(self, MockViewer, mock_remove_pics):
@@ -194,17 +186,18 @@ class ViewPicsTests(unittest.TestCase):
         app.view_pics(prog)
 
         MockViewer.assert_called_once_with(prog)
-        mock_viewer_inst.show.assert_called_once_with(self.thumbs)
+        mock_viewer_inst.show.assert_called_once_with(self.repo.index.pics())
         mock_remove_pics.assert_called_once_with([])
 
     def test_removing_pics(self, MockViewer, mock_remove_pics):
         mock_viewer_inst = MockViewer.return_value
-        mock_viewer_inst.show.return_value = self.thumbs[4:7]
+        mock_viewer_inst.show.return_value = self.repo.index.pics()[4:7]
 
         app = App(self.connector, self.repo)
         app.view_pics(prog=None)
 
-        mock_remove_pics.assert_called_with(self.thumbs[4:7])
+        pic_filenames = [pic.filename for pic in self.repo.index.pics()[4:7]]
+        mock_remove_pics.assert_called_with(pic_filenames)
 
 
 

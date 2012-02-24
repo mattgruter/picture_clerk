@@ -17,7 +17,13 @@ class Viewer(object):
 
     def show(self, pics):
         log.info("Starting viewer '%s'" % self.prog)
-        cmd = self.prog.split() + pics
+
+        thumb2pic = {pic.get_thumbnail_filenames()[0]: list()
+                         for pic in pics}
+        for pic in pics:
+            thumb2pic[pic.get_thumbnail_filenames()[0]].append(pic)
+
+        cmd = self.prog.split() + thumb2pic.keys()
         log.debug("Executing command line '%s'" % cmd)
         try:
             subprocess.check_call(cmd)
@@ -28,5 +34,8 @@ class Viewer(object):
         except OSError, e:
             log.exception("Exception raised during execution:")
             return []
+
         # return list over missing pictures (i.e. pics deleted by viewer)
-        return [pic for pic in pics if not os.path.exists(pic)]
+        return [pic
+                for k, v in thumb2pic.iteritems() if not os.path.exists(k)
+                for pic in v]
