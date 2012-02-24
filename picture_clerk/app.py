@@ -85,8 +85,7 @@ class App(object):
             try:
                 self.connector.remove(picfile)
             except OSError, e:
-                if "no such file" in e.message.lower():
-                    # ignore exceptions about missing (= already removed) files
+                if e.errno == 2: # ignore missing file (= already removed) error
                     log.debug("No such file: %s" % e.filename)
                 else:
                     raise   # re-raise all other (e.g. permission error)
@@ -120,12 +119,10 @@ class App(object):
                                repo.config['logging.format'])
         if not prog:
             prog = repo.config['viewer.prog']
-        viewer = Viewer(prog)
-        del_pics = viewer.show([pic.get_thumbnail_filenames()[0]
-                                for pic in repo.index.pics()])
-
-        print del_pics
-
+        v = Viewer(prog)
+        thumbs = [pic.get_thumbnail_filenames()[0] for pic in repo.index.pics()]
+        del_files = v.show(thumbs)
+        self.remove_pics(del_files)
 
     def init_repo_logging(self, log_file, log_format):
         # repo file logging (only if repo is local)

@@ -117,6 +117,62 @@ class TestApp(unittest.TestCase):
                                  ['%s *%s' % (pic.checksum, pic.filename)
                                   for pic in sorted(self.pics)])
 
+@mock.patch('app.App.remove_pics')
+@mock.patch('app.Viewer', spec_set=True)
+class TestViewer(unittest.TestCase):
+
+    def setUp(self):
+        # test pictures
+        self.pics = [picture.Picture('DSC_%04i.NEF' % i)
+                     for i in range(32, 10, -1)]
+        for pic in self.pics:
+            pic.checksum = hashlib.sha1(pic.filename).hexdigest()
+            pic.add_sidecar(pic.basename + '.thumb.jpg', 'thumbnail')
+        pi = index.PictureIndex()
+        pi.add(self.pics)
+        self.thumbs = [pic.get_thumbnail_filenames()[0] for pic in self.pics]
+
+        # test repo
+        self.connector = MockConnector(urlparse.urlparse('/basedir/repo/'))
+        self.default_conf = config.Config(config.REPO_CONFIG)
+        repo.Repo.create_on_disk(self.connector, self.default_conf, pi)
+
+    def tearDown(self):
+        pass
+
+    def test_default_prog(self, MockViewer, mock_remove_pics):
+        mock_viewer_inst = MockViewer.return_value
+        mock_viewer_inst.show.return_value = []
+
+        app = App(self.connector)
+        app.view_pics(prog=None)
+
+        MockViewer.assert_called_once_with(self.default_conf['viewer.prog'])
+        mock_viewer_inst.show.assert_called_once_with(sorted(self.thumbs))
+        mock_remove_pics.assert_called_once_with([])
+
+    def test_supplied_prog(self, MockViewer, mock_remove_pics):
+        mock_viewer_inst = MockViewer.return_value
+        mock_viewer_inst.show.return_value = []
+
+        app = App(self.connector)
+        prog = 'awesome-viewer-app arg1 --opt1 -o2'
+        app.view_pics(prog)
+
+        MockViewer.assert_called_once_with(prog)
+        mock_viewer_inst.show.assert_called_once_with(sorted(self.thumbs))
+        mock_remove_pics.assert_called_once_with([])
+
+    def test_removing_pics(self, MockViewer, mock_remove_pics):
+        mock_viewer_inst = MockViewer.return_value
+        mock_viewer_inst.show.return_value = self.thumbs[4:7]
+
+        app = App(self.connector)
+        app.view_pics(prog=None)
+
+        mock_remove_pics.assert_called_with(self.thumbs[4:7])
+
+
 
 if __name__ == "__main__":
     unittest.main()
