@@ -27,7 +27,7 @@ class IndexParsingError(Exception):
         Exception.__init__(self)
         self.orig_exp = exp
     def __str__(self):
-        return "Error parsing index: %s" % str(self.exp)
+        return "Error parsing index: %s" % str(self.orig_exp)
 
 
 class PictureIndex(collections.MutableMapping):
