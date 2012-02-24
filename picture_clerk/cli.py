@@ -121,7 +121,6 @@ class CLI(object):
         parser_add.add_argument(
             '--recipe',
             dest='recipe',
-            nargs=1,
             help="processing instructions (comma separated list)")
         parser_add.add_argument(
             'files',
