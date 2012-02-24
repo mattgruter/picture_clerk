@@ -21,15 +21,24 @@ log = logging.getLogger('pic.app')
 class App(object):
     """PictureClerk's command line interface."""
 
-    def __init__(self, connector):
+    def __init__(self, connector, repo=None):
         self.connector = connector
+        self.repo = repo
 
-    def init(self):
+    def init_repo(self):
+        """Initialize new repository."""
         repo_config = config.Config.from_dict(config.REPO_CONFIG)
-        Repo.create_on_disk(self.connector, repo_config)
+        self.repo = Repo.create_on_disk(self.connector, repo_config)
         self.init_repo_logging(repo_config['logging.file'],
                                repo_config['logging.format'])
         log.info("Initialized empty PictureClerk repository")
+
+    def load_repo(self):
+        """Load existing repository from disk."""
+        self.repo = Repo.load_from_disk(self.connector)
+        self.init_repo_logging(self.repo.config['logging.file'],
+                               self.repo.config['logging.format'])
+        log.info("Loaded PictureClerk repository from disk")
 
     def add_pics(self, paths, process_enabled, process_recipe=None):
         """Add pictures to repository.
@@ -40,11 +49,8 @@ class App(object):
         process_recipe  -- recipe to use for picture processing  
         
         """
-        repo = Repo.load_from_disk(self.connector)
-        self.init_repo_logging(repo.config['logging.file'],
-                               repo.config['logging.format'])
         pics = [Picture(path) for path in paths if os.path.exists(path)]
-        repo.index.add(pics)
+        self.repo.index.add(pics)
 
         # process pictures                
         if process_enabled:
@@ -52,7 +58,7 @@ class App(object):
             # set up pipeline
             if not process_recipe:
                 process_recipe = Recipe.fromString(
-                             repo.config['recipes.default'])
+                                           self.repo.config['recipes.default'])
             pl = Pipeline('Pipeline1', process_recipe,
                           path=self.connector.url.path,
                           logdir=config.LOGDIR)
@@ -63,18 +69,14 @@ class App(object):
             pl.join()
 
         log.info("Saving index to file.")
-        repo.save_to_disk()
+        self.repo.save_to_disk()
 
     def remove_pics(self, files):
         """Remove pictures associated with supplied files from repo & disk."""
-        repo = Repo.load_from_disk(self.connector)
-        self.init_repo_logging(repo.config['logging.file'],
-                               repo.config['logging.format'])
-
         # find all pictures that refer to given files and remove from index
         pics = [pic for fname in files
-                    for pic in repo.index.find_by_filename(fname)]
-        repo.index.remove(pics)
+                    for pic in self.repo.index.find_by_filename(fname)]
+        self.repo.index.remove(pics)
 
         # remove all files associated with above pictures
         picfiles = (picfile for pic in pics
@@ -92,7 +94,7 @@ class App(object):
         self.connector.disconnect()
 
         log.info("Saving index to file.")
-        repo.save_to_disk()
+        self.repo.save_to_disk()
 
     def list_pics(self, mode):
         """Return information on pictures in repository."""

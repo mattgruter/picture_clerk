@@ -60,18 +60,22 @@ class CLI(object):
         args.func(app, args)
 
     def handle_init_cmd(self, app, args):
-        app.init()
+        app.init_repo()
 
     def handle_add_cmd(self, app, args):
+        app.load_repo()
         app.add_pics(args.files, args.process, args.recipe)
 
     def handle_remove_cmd(self, app, args):
+        app.load_repo()
         app.remove_pics(args.files)
 
     def handle_list_cmd(self, app, args):
+        app.load_repo()
         print app.list_pics(args.mode)
 
     def handle_view_cmd(self, app, args):
+        app.load_repo()
         app.view_pics(args.viewer)
 
     def handle_test_cmd(self, app, args):
