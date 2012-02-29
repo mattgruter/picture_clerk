@@ -96,31 +96,25 @@ class App(object):
 
     def list_pics(self, mode):
         """Return information on pictures in repository."""
-        repo = Repo.load_from_disk(self.connector)
-        self.init_repo_logging(repo.config['logging.file'],
-                               repo.config['logging.format'])
         if mode == "all":
             return '\n'.join(('%s' % str(pic)
-                              for pic in repo.index.pics()))
+                              for pic in self.repo.index.pics()))
         elif mode == "sidecars":
             return '\n'.join(('\n'.join(pic.get_sidecar_filenames())
-                              for pic in repo.index.pics()))
+                              for pic in self.repo.index.pics()))
         elif mode == "thumbnails":
             return '\n'.join(('\n'.join(pic.get_thumbnail_filenames())
-                              for pic in repo.index.pics()))
+                              for pic in self.repo.index.pics()))
         elif mode == "checksums":
             return '\n'.join(('%s *%s' % (pic.checksum, pic.filename)
-                              for pic in repo.index.pics()))
+                              for pic in self.repo.index.pics()))
 
     def view_pics(self, prog):
         """Launch viewer program and keep track of pictures deleted within."""
-        repo = Repo.load_from_disk(self.connector)
-        self.init_repo_logging(repo.config['logging.file'],
-                               repo.config['logging.format'])
         if not prog:
-            prog = repo.config['viewer.prog']
+            prog = self.repo.config['viewer.prog']
         v = Viewer(prog)
-        deleted_pics = v.show(repo.index.pics())
+        deleted_pics = v.show(self.repo.index.pics())
         self.remove_pics([pic.filename for pic in deleted_pics])
 
     def init_repo_logging(self, log_file, log_format):
