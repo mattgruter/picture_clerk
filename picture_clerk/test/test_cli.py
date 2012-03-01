@@ -174,5 +174,20 @@ class SubcommandViewTests(unittest.TestCase):
         mock_exit.assert_called_once_with(0)
 
 
+@mock.patch('sys.exit')
+@mock.patch('cli.App')
+class SubcommandMigrateTests(unittest.TestCase):
+
+    def test_migrate(self, MockApp, mock_exit):
+        app = MockApp()
+        cli = CLI()
+        cli.main(['progname', 'migrate'])
+
+        app.load_repo.assert_called_once_with()
+        app.migrate_repo.assert_called_once_with()
+        app.shutdown.assert_called_once_with()
+        mock_exit.assert_called_once_with(0)
+
+
 if __name__ == "__main__":
     unittest.main()

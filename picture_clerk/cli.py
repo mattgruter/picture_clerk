@@ -78,6 +78,10 @@ class CLI(object):
         app.load_repo()
         app.view_pics(args.viewer)
 
+    def handle_migrate_cmd(self, app, args):
+        app.load_repo()
+        app.migrate_repo()
+
     def handle_test_cmd(self, app, args):
         print "Testing..."
         log.info("Starting endless loop.")
@@ -161,6 +165,12 @@ class CLI(object):
              metavar='CMD',
              help="program to use as picture viewer")
         parser_view.set_defaults(func=self.handle_view_cmd)
+
+        # 'migrate' subcommand
+        parser_migrate = subparsers.add_parser(
+            'migrate',
+            help="migrate repository to new format")
+        parser_migrate.set_defaults(func=self.handle_migrate_cmd)
 
         # 'test' subcommand
         parser_test = subparsers.add_parser(
