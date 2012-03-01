@@ -47,16 +47,12 @@ class Repo(object):
         self.config = config
         self.connector = connector
 
-    def save_to_disk(self):
+    def save_index_to_disk(self):
         """Save picture index to disk."""
-        try:
-            self.connector.connect()
-            index_filename = self.config['index.file']
-            with self.connector.open(index_filename, 'wb') as index_fh:
-                self.index.write(index_fh)
-        except: # disconnect in case of exception, otherwise stay connected
-            self.connector.disconnect()
-            raise
+        index_filename = self.config['index.file']
+        with self.connector.open(index_filename, 'wb') as index_fh:
+            self.index.write(index_fh)
+
 
     def load_config_from_disk(self):
         """Load configuration from disk and return it."""
@@ -92,7 +88,7 @@ class Repo(object):
             with connector.open(config.CONFIG_FILE, 'w') as config_fh:
                 conf.write(config_fh)
             repo = Repo(pi, conf, connector)
-            repo.save_to_disk()
+            repo.save_index_to_disk()
         finally:
             connector.disconnect()
         return repo

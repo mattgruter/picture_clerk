@@ -69,7 +69,11 @@ class App(object):
             pl.join()
 
         log.info("Saving index to file.")
-        self.repo.save_to_disk()
+        try:
+            self.connector.connect()
+            self.repo.save_index_to_disk()
+        finally:
+            self.connector.disconnect()
 
     def remove_pics(self, files):
         """Remove pictures associated with supplied files from repo & disk."""
@@ -89,10 +93,10 @@ class App(object):
                     log.debug("No such file: %s" % e.filename)
                 else:
                     raise   # re-raise all other (e.g. permission error)
-        self.connector.disconnect()
 
         log.info("Saving index to file.")
-        self.repo.save_to_disk()
+        self.repo.save_index_to_disk()
+        self.connector.disconnect()
 
     def list_pics(self, mode):
         """Return information on pictures in repository."""
