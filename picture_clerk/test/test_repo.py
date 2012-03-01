@@ -14,7 +14,7 @@ import index
 
 from testlib import MockConnector
 from index import PictureIndex
-from repo import Repo
+from repo import Repo, RepoNotFoundError, VersionMismatchError
 from picture import Picture
 
 
@@ -103,6 +103,21 @@ class FactoryTests(unittest.TestCase):
         self.assertIsNot(repo_loaded.index, repo_created.index)
         self.assertIsNot(repo_loaded, repo_created)
         self.assertIs(repo_loaded.connector, self.connector)
+
+    def test_load_notfound_error(self):
+        self.connector.exists = mock.Mock(return_value=False)
+        with self.assertRaises(RepoNotFoundError) as cm:
+            Repo.load_from_disk(self.connector)
+        self.assertEqual(cm.exception.url, self.connector.url)
+
+    def test_load_version_mismatch_error(self):
+        self.conf['index.format_version'] = 99
+        Repo.create_on_disk(self.connector, self.conf, self.pi)
+
+        with self.assertRaises(VersionMismatchError) as cm:
+            Repo.load_from_disk(self.connector)
+        self.assertEqual(cm.exception.actual, 99)
+        self.assertEqual(cm.exception.expected, config.INDEX_FORMAT_VERSION)
 
     def test_clone(self):
         src_repo = Repo.create_on_disk(self.connector, self.conf, self.pi)

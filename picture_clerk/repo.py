@@ -17,6 +17,17 @@ class RepoNotFoundError(Exception):
     def __str__(self):
         return "No repository found at %s" % self.url.geturl()
 
+class VersionMismatchError(Exception):
+    def __init__(self, actual, expected):
+        Exception.__init__(self)
+        self.actual = actual
+        self.expected = expected
+    def __str__(self):
+        s = "Repository version mismatch: "
+        s += "detected %i, " % self.actual
+        s += "expected %i" % self.expected
+        return s
+
 
 class Repo(object):
 
@@ -93,22 +104,28 @@ class Repo(object):
         connector -- connector to index's base dir
         
         """
+        repo = Repo(config={}, index={}, connector=connector)
         try:
             connector.connect()
+
+            # check if dir exists
             if not (connector.exists('.') and connector.exists(config.PIC_DIR)):
                 raise RepoNotFoundError(connector.url)
-            # load config
-            conf = config.Config(config.REPO_CONFIG)
-            with connector.open(config.CONFIG_FILE, 'r') as config_fh:
-                conf.read(config_fh)
-            # load index
-            pic_index = index.PictureIndex()
-            index_filename = conf['index.file']
-            with connector.open(index_filename, 'rb') as index_fh:
-                pic_index.read(index_fh)
+
+            repo.config = repo.load_config_from_disk()
+
+            # check index format version
+            version = repo.config['index.format_version']
+            expected_version = config.INDEX_FORMAT_VERSION
+            if  version != expected_version:
+                raise VersionMismatchError(version, expected_version)
+
+            repo.index = repo.load_index_from_disk()
+
         finally:
             connector.disconnect()
-        return Repo(pic_index, conf, connector)
+
+        return repo
 
     @classmethod
     def clone(cls, src, dest):
