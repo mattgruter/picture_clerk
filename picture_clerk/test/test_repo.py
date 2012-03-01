@@ -34,10 +34,69 @@ class BasicTests(unittest.TestCase):
         self.assertIs(repo.config, self.config)
         self.assertIs(repo.connector, self.connector)
 
-    @unittest.skip
-    def test_save_to_disk(self):
-        #@todo
-        self.assertTrue(False)
+
+class LoadTests(unittest.TestCase):
+
+    def setUp(self):
+        self.connector = MockConnector(urlparse.urlparse('/baseurl/repo/'))
+        self.pi = index.PictureIndex()
+        self.pi.add(MockPicture.create_many(10))
+        self.conf = config.Config(config.REPO_CONFIG)
+        self.conf['index.file'] = 'mock-index-path'
+        Repo.create_on_disk(self.connector, self.conf, self.pi)
+        self.connector.connect()
+
+    def tearDown(self):
+        self.connector.disconnect()
+
+    def test_load_config_from_disk(self):
+        repo = Repo(index={}, config={}, connector=self.connector)
+        repo.load_config_from_disk()
+
+        self.assertEqual(repo.config, self.conf)
+        self.assertIsNot(repo.config, self.conf)
+        self.assertEqual(repo.index, {})
+
+    def test_load_index_from_disk(self):
+        repo = Repo(index={}, config=self.conf, connector=self.connector)
+        repo.load_index_from_disk()
+
+        self.assertEqual(repo.index, self.pi)
+        self.assertIsNot(repo.index, self.pi)
+
+
+class SaveTests(unittest.TestCase):
+
+    def setUp(self):
+        self.connector = MockConnector(urlparse.urlparse('/baseurl/repo/'))
+        self.pi = index.PictureIndex()
+        self.pi.add(MockPicture.create_many(10))
+        self.conf = config.Config(config.REPO_CONFIG)
+        self.conf['index.file'] = 'mock-index-path'
+        self.connector.connect()
+
+    def tearDown(self):
+        self.connector.disconnect()
+
+    def test_save_config_to_disk(self):
+        repo = Repo(self.pi, self.conf, self.connector)
+        repo.save_config_to_disk()
+
+        self.assertTrue(self.connector.opened(config.CONFIG_FILE))
+        config_on_disk = config.Config()
+        config_on_disk.read(self.connector.get_file(config.CONFIG_FILE))
+        self.assertEqual(config_on_disk, self.conf)
+        self.assertIsNot(config_on_disk, self.conf)
+
+    def test_save_index_to_disk(self):
+        repo = Repo(self.pi, self.conf, self.connector)
+        repo.save_index_to_disk()
+
+        self.assertTrue(self.connector.opened('mock-index-path'))
+        index_on_disk = index.PictureIndex()
+        index_on_disk.read(self.connector.get_file('mock-index-path'))
+        self.assertEqual(index_on_disk, self.pi)
+        self.assertIsNot(index_on_disk, self.pi)
 
 
 class FactoryTests(unittest.TestCase):
@@ -91,7 +150,7 @@ class FactoryTests(unittest.TestCase):
         index_on_disk.read(self.connector.get_file('mock-index-path'))
         self.assertEqual(index_on_disk, self.pi)
 
-    def test_created_and_load_from_disk(self):
+    def test_load_from_disk(self):
         repo_created = Repo.create_on_disk(self.connector, self.conf, self.pi)
         repo_loaded = Repo.load_from_disk(self.connector)
 

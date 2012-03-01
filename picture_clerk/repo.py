@@ -47,18 +47,22 @@ class Repo(object):
         self.config = config
         self.connector = connector
 
-    def save_index_to_disk(self):
-        """Save picture index to disk."""
-        index_filename = self.config['index.file']
-        with self.connector.open(index_filename, 'wb') as index_fh:
-            self.index.write(index_fh)
-
+    def save_config_to_disk(self):
+        """Save configuration to disk."""
+        with self.connector.open(config.CONFIG_FILE, 'w') as config_fh:
+            self.config.write(config_fh)
 
     def load_config_from_disk(self):
         """Load configuration from disk."""
         self.config = config.Config(config.REPO_CONFIG)
         with self.connector.open(config.CONFIG_FILE, 'r') as config_fh:
             self.config.read(config_fh)
+
+    def save_index_to_disk(self):
+        """Save picture index to disk."""
+        index_filename = self.config['index.file']
+        with self.connector.open(index_filename, 'wb') as index_fh:
+            self.index.write(index_fh)
 
     def load_index_from_disk(self):
         """Load picture index from disk."""
