@@ -47,6 +47,20 @@ class Repo(object):
             self.connector.disconnect()
             raise
 
+    def load_config_from_disk(self):
+        """Load configuration from disk and return it."""
+        conf = config.Config(config.REPO_CONFIG)
+        with self.connector.open(config.CONFIG_FILE, 'r') as config_fh:
+            conf.read(config_fh)
+        return conf
+
+    def load_index_from_disk(self):
+        """Load picture index from disk and return it."""
+        pic_index = index.PictureIndex()
+        with self.connector.open(self.config['index.file'], 'rb') as index_fh:
+            pic_index.read(index_fh)
+        return pic_index
+
 
     @classmethod
     def create_on_disk(cls, connector, conf, pi=None):
