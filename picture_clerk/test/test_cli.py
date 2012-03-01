@@ -46,7 +46,7 @@ class ArgsParsingTests(unittest.TestCase):
         cli = CLI()
         with self.assertRaises(SystemExit) as cm:
             cli.main(['progname', 'asdf'])
-        self.assertNotEqual(cm.exception.code, "Expected non-zero exit code")
+        self.assertNotEqual(cm.exception.code, 0, "Expected non-zero exit code")
 
 
 @mock.patch('sys.exit')
