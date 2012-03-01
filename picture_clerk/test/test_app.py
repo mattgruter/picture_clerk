@@ -155,6 +155,32 @@ class ListPicsTests(unittest.TestCase):
         self.assertSequenceEqual(app.list_pics('checksums'), expected)
 
 
+class MigrateRepoTests(unittest.TestCase):
+
+    def setUp(self):
+        self.connector = MockConnector(urlparse.urlparse('/basedir/repo/'))
+
+    def tearDown(self):
+        pass
+
+    def test_migrate_repo(self):
+        repo_old = create_mock_repo(self.connector)
+        repo_old.config['index.format_version'] = 0
+        try:
+            self.connector.connect()
+            repo_old.save_config_to_disk()
+        finally:
+            self.connector.disconnect()
+        app = App(self.connector, repo_old)
+        app.migrate_repo()
+
+        # load repo from disk and check it's index version
+        repo_new = repo.Repo.load_from_disk(self.connector)
+        self.assertEqual(repo_new.config['index.format_version'],
+                         config.INDEX_FORMAT_VERSION)
+        self.assertIsNot(repo_new.config, repo_old.config)
+
+
 @mock.patch('app.App.remove_pics')
 @mock.patch('app.Viewer', spec_set=True)
 class ViewPicsTests(unittest.TestCase):

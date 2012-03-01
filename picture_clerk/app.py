@@ -121,6 +121,17 @@ class App(object):
         deleted_pics = v.show(self.repo.index.pics())
         self.remove_pics([pic.filename for pic in deleted_pics])
 
+    def migrate_repo(self):
+        """Migrate repository from an old format to the current one."""
+        log.info("Migrating repository to new format.")
+        self.repo.config['index.format_version'] = config.INDEX_FORMAT_VERSION
+        try:
+            self.connector.connect()
+            self.repo.save_index_to_disk()
+            self.repo.save_config_to_disk()
+        finally:
+            self.connector.disconnect()
+
     def init_repo_logging(self, log_file, log_format):
         # repo file logging (only if repo is local)
         if isinstance(self.connector, LocalConnector):
