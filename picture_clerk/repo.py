@@ -10,7 +10,7 @@ import copy
 import config
 import index
 
-class RepoNotFoundError(Exception):
+class NotFoundError(Exception):
     def __init__(self, url):
         Exception.__init__(self)
         self.url = url
@@ -110,7 +110,7 @@ class Repo(object):
 
             # check if dir exists
             if not (connector.exists('.') and connector.exists(config.PIC_DIR)):
-                raise RepoNotFoundError(connector.url)
+                raise NotFoundError(connector.url)
 
             repo.config = repo.load_config_from_disk()
 

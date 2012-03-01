@@ -14,7 +14,7 @@ import index
 
 from testlib import MockConnector
 from index import PictureIndex
-from repo import Repo, RepoNotFoundError, VersionMismatchError
+from repo import Repo, NotFoundError, VersionMismatchError
 from picture import Picture
 
 
@@ -106,7 +106,7 @@ class FactoryTests(unittest.TestCase):
 
     def test_load_notfound_error(self):
         self.connector.exists = mock.Mock(return_value=False)
-        with self.assertRaises(RepoNotFoundError) as cm:
+        with self.assertRaises(NotFoundError) as cm:
             Repo.load_from_disk(self.connector)
         self.assertEqual(cm.exception.url, self.connector.url)
 
