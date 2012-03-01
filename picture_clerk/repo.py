@@ -55,18 +55,16 @@ class Repo(object):
 
 
     def load_config_from_disk(self):
-        """Load configuration from disk and return it."""
-        conf = config.Config(config.REPO_CONFIG)
+        """Load configuration from disk."""
+        self.config = config.Config(config.REPO_CONFIG)
         with self.connector.open(config.CONFIG_FILE, 'r') as config_fh:
-            conf.read(config_fh)
-        return conf
+            self.config.read(config_fh)
 
     def load_index_from_disk(self):
-        """Load picture index from disk and return it."""
-        pic_index = index.PictureIndex()
+        """Load picture index from disk."""
+        self.index = index.PictureIndex()
         with self.connector.open(self.config['index.file'], 'rb') as index_fh:
-            pic_index.read(index_fh)
-        return pic_index
+            self.index.read(index_fh)
 
 
     @classmethod
@@ -108,7 +106,7 @@ class Repo(object):
             if not (connector.exists('.') and connector.exists(config.PIC_DIR)):
                 raise NotFoundError(connector.url)
 
-            repo.config = repo.load_config_from_disk()
+            repo.load_config_from_disk()
 
             # check index format version
             version = repo.config['index.format_version']
@@ -116,7 +114,7 @@ class Repo(object):
             if  version != expected_version:
                 raise VersionMismatchError(version, expected_version)
 
-            repo.index = repo.load_index_from_disk()
+            repo.load_index_from_disk()
 
         finally:
             connector.disconnect()
