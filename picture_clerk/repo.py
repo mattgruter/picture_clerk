@@ -6,9 +6,12 @@ Created on 2011/08/09
 @license: GPL
 """
 import copy
+import logging
 
 import config
 import index
+
+log = logging.getLogger('pic.repo')
 
 class NotFoundError(Exception):
     def __init__(self, url):
@@ -49,17 +52,20 @@ class Repo(object):
 
     def save_config_to_disk(self):
         """Save configuration to disk."""
+        log.info("Saving repository configuration.")
         with self.connector.open(config.CONFIG_FILE, 'w') as config_fh:
             self.config.write(config_fh)
 
     def load_config_from_disk(self):
         """Load configuration from disk."""
+        log.info("Loading repository configuration.")
         self.config = config.Config(config.REPO_CONFIG)
         with self.connector.open(config.CONFIG_FILE, 'r') as config_fh:
             self.config.read(config_fh)
 
     def save_index_to_disk(self):
         """Save picture index to disk."""
+        log.info("Saving repository picture index, version %i" % config.INDEX_FORMAT_VERSION)
         index_filename = self.config['index.file']
         with self.connector.open(index_filename, 'wb') as index_fh:
             self.index.write(index_fh)
@@ -69,6 +75,7 @@ class Repo(object):
         if version > config.INDEX_FORMAT_VERSION:
             raise VersionMismatchError(version, config.INDEX_FORMAT_VERSION)
         else:
+            log.info("Loading repository picture index, version %i" % version)
             index_filename = self.config['index.file']
             index_loader = {1: self._load_index_v1} # mapping version vs. method
             with self.connector.open(index_filename, 'rb') as index_fh:
