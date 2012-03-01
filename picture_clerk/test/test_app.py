@@ -16,7 +16,7 @@ from testlib import MockConnector, MockPicture
 from app import App
 
 
-def create_repo(connector):
+def create_mock_repo(connector):
     # test index
     pi = index.PictureIndex()
     pi.add(MockPicture.create_many(20))
@@ -56,7 +56,7 @@ class LoadRepoTests(unittest.TestCase):
 
     def setUp(self):
         self.connector = MockConnector(urlparse.urlparse('/basedir/repo/'))
-        self.repo = create_repo(self.connector)
+        self.repo = create_mock_repo(self.connector)
 
     def tearDown(self):
         pass
@@ -77,7 +77,7 @@ class AddRemovePicsTests(unittest.TestCase):
 
     def setUp(self):
         self.connector = MockConnector(urlparse.urlparse('/basedir/repo/'))
-        self.repo = create_repo(self.connector)
+        self.repo = create_mock_repo(self.connector)
 
     def tearDown(self):
         pass
@@ -123,7 +123,7 @@ class ListPicsTests(unittest.TestCase):
 
     def setUp(self):
         self.connector = MockConnector(urlparse.urlparse('/basedir/repo/'))
-        self.repo = create_repo(self.connector)
+        self.repo = create_mock_repo(self.connector)
 
     def tearDown(self):
         pass
@@ -161,7 +161,7 @@ class ViewPicsTests(unittest.TestCase):
 
     def setUp(self):
         self.connector = MockConnector(urlparse.urlparse('/basedir/repo/'))
-        self.repo = create_repo(self.connector)
+        self.repo = create_mock_repo(self.connector)
 
     def tearDown(self):
         pass
