@@ -64,6 +64,33 @@ class LoadTests(unittest.TestCase):
         self.assertEqual(repo.index, self.pi)
         self.assertIsNot(repo.index, self.pi)
 
+    def test_load_index_version_current(self):
+        repo = Repo(index={}, config=self.conf, connector=self.connector)
+        repo.load_index_from_disk(config.INDEX_FORMAT_VERSION)
+
+        self.assertEqual(repo.index, self.pi)
+        self.assertIsNot(repo.index, self.pi)
+
+    def test_load_index_version_1(self):
+        repo = Repo(index={}, config=self.conf, connector=self.connector)
+        repo.load_index_from_disk(1)
+
+        self.assertEqual(repo.index, self.pi)
+        self.assertIsNot(repo.index, self.pi)
+
+    def test_load_index_version_too_low(self):
+        repo = Repo(index={}, config=self.conf, connector=self.connector)
+
+        self.assertRaises(KeyError, repo.load_index_from_disk, 0)
+
+    def test_load_version_mismatch_error(self):
+        repo = Repo(index={}, config=self.conf, connector=self.connector)
+
+        with self.assertRaises(VersionMismatchError) as cm:
+            repo.load_index_from_disk(99)
+        self.assertEqual(cm.exception.actual, 99)
+        self.assertEqual(cm.exception.expected, config.INDEX_FORMAT_VERSION)
+
 
 class SaveTests(unittest.TestCase):
 

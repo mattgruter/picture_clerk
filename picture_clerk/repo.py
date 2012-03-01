@@ -64,12 +64,20 @@ class Repo(object):
         with self.connector.open(index_filename, 'wb') as index_fh:
             self.index.write(index_fh)
 
-    def load_index_from_disk(self):
+    def load_index_from_disk(self, version=config.INDEX_FORMAT_VERSION):
         """Load picture index from disk."""
-        self.index = index.PictureIndex()
-        with self.connector.open(self.config['index.file'], 'rb') as index_fh:
-            self.index.read(index_fh)
+        if version > config.INDEX_FORMAT_VERSION:
+            raise VersionMismatchError(version, config.INDEX_FORMAT_VERSION)
+        else:
+            index_filename = self.config['index.file']
+            index_loader = {1: self._load_index_v1} # mapping version vs. method
+            with self.connector.open(index_filename, 'rb') as index_fh:
+                self.index = index_loader[version](index_fh)
 
+    def _load_index_v1(self, fh):
+        pi = index.PictureIndex()
+        pi.read(fh)
+        return pi
 
     @classmethod
     def create_on_disk(cls, connector, conf, pi=None):
@@ -111,14 +119,7 @@ class Repo(object):
                 raise NotFoundError(connector.url)
 
             repo.load_config_from_disk()
-
-            # check index format version
-            version = repo.config['index.format_version']
-            expected_version = config.INDEX_FORMAT_VERSION
-            if  version != expected_version:
-                raise VersionMismatchError(version, expected_version)
-
-            repo.load_index_from_disk()
+            repo.load_index_from_disk(repo.config['index.format_version'])
 
         finally:
             connector.disconnect()
