@@ -57,36 +57,43 @@ class CLI(object):
         root_logger.addHandler(console)
 
     def dispatch_args(self, app, args):
-        args.func(app, args)
+        return args.func(app, args)
 
     def handle_init_cmd(self, app, args):
         app.init_repo()
+        return 0
 
     def handle_add_cmd(self, app, args):
         app.load_repo()
         app.add_pics(args.files, args.process, args.recipe)
+        return 0
 
     def handle_remove_cmd(self, app, args):
         app.load_repo()
         app.remove_pics(args.files)
+        return 0
 
     def handle_list_cmd(self, app, args):
         app.load_repo()
         print app.list_pics(args.mode)
+        return 0
 
     def handle_view_cmd(self, app, args):
         app.load_repo()
         app.view_pics(args.viewer)
+        return 0
 
     def handle_migrate_cmd(self, app, args):
         app.load_repo()
         app.migrate_repo()
+        return 0
 
     def handle_test_cmd(self, app, args):
         print "Testing..."
         log.info("Starting endless loop.")
         while True:
             pass
+        return 0
 
     def parse_args(self, args):
         """Parse command line arguments and return result.
@@ -185,8 +192,8 @@ class CLI(object):
         self.setup_signal_handlers()
         self.setup_logging(args.verbosity)
         self.app = App(Connector.from_string('.'))
-        self.dispatch_args(self.app, args)
-        self.shutdown(0)
+        exit_code = self.dispatch_args(self.app, args)
+        self.shutdown(exit_code)
 
     def shutdown(self, exit_code):
         self.app.shutdown()
