@@ -43,14 +43,18 @@ class CLI(object):
         """
         root_logger = logging.getLogger()
         root_logger.setLevel(logging.DEBUG)
-        formatter = logging.Formatter('%(message)s')
 
         # stdout console logger
+        formatter = logging.Formatter('%(message)s')
         log_level = logging.WARNING  # default
         if verbosity == 1:
             log_level = logging.INFO
         elif verbosity >= 2:
             log_level = logging.DEBUG
+            formatter = logging.Formatter("%(asctime)s "
+                                          "%(name)-15s"
+                                          "%(levelname)-8s "
+                                          "%(message)s")
         console = logging.StreamHandler(sys.stdout)
         console.setLevel(log_level)
         console.setFormatter(formatter)
