@@ -100,13 +100,6 @@ class CLI(object):
             exit_code = 1
         return exit_code
 
-    def handle_test_cmd(self, app, args):
-        print "Testing..."
-        log.info("Starting endless loop.")
-        while True:
-            pass
-        return 0
-
     def parse_args(self, args):
         """Parse command line arguments and return result.
         
@@ -196,12 +189,6 @@ class CLI(object):
             'check',
             help="find corrupt or missing picture files")
         parser_check.set_defaults(func=self.handle_check_cmd)
-
-        # 'test' subcommand
-        parser_test = subparsers.add_parser(
-            'test',
-            help="testing CLI")
-        parser_test.set_defaults(func=self.handle_test_cmd)
 
         return parser.parse_args(args)
 
