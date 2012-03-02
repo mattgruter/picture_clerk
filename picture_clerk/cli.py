@@ -57,7 +57,13 @@ class CLI(object):
         root_logger.addHandler(console)
 
     def dispatch_args(self, app, args):
-        return args.func(app, args)
+        try:
+            exit_code = args.func(app, args)
+        except:
+            log.info("", exc_info=sys.exc_info())
+            log.error(sys.exc_info()[1])
+            exit_code = 1
+        return exit_code
 
     def handle_init_cmd(self, app, args):
         app.init_repo()
