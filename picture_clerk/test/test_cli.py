@@ -189,5 +189,32 @@ class SubcommandMigrateTests(unittest.TestCase):
         mock_exit.assert_called_once_with(0)
 
 
+@mock.patch('sys.exit')
+@mock.patch('cli.App')
+class SubcommandCheckTests(unittest.TestCase):
+
+    def test_check(self, MockApp, mock_exit):
+        app = MockApp()
+        app.check_pics.return_value = ([], [])
+        cli = CLI()
+        cli.main(['progname', 'check'])
+
+        app.load_repo.assert_called_once_with()
+        app.check_pics.assert_called_once_with()
+        app.shutdown.assert_called_once_with()
+        mock_exit.assert_called_once_with(0)
+
+    def test_check_fail(self, MockApp, mock_exit):
+        app = MockApp()
+        app.check_pics.return_value = (['corrupt pic'], ['missing pic'])
+        cli = CLI()
+        cli.main(['progname', 'check'])
+
+        app.load_repo.assert_called_once_with()
+        app.check_pics.assert_called_once_with()
+        app.shutdown.assert_called_once_with()
+        mock_exit.assert_called_once_with(1)
+
+
 if __name__ == "__main__":
     unittest.main()

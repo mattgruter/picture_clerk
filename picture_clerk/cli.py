@@ -88,6 +88,18 @@ class CLI(object):
         app.migrate_repo()
         return 0
 
+    def handle_check_cmd(self, app, args):
+        app.load_repo()
+        corrupt_pics, missing_pics = app.check_pics()
+        exit_code = 0
+        if corrupt_pics:
+            print '\n'.join('CORRUPT: %s' % pic for pic in corrupt_pics)
+            exit_code = 1
+        if missing_pics:
+            print '\n'.join('MISSING: %s' % pic for pic in missing_pics)
+            exit_code = 1
+        return exit_code
+
     def handle_test_cmd(self, app, args):
         print "Testing..."
         log.info("Starting endless loop.")
@@ -178,6 +190,12 @@ class CLI(object):
             'migrate',
             help="migrate repository to new format")
         parser_migrate.set_defaults(func=self.handle_migrate_cmd)
+
+        # 'check' subcommand
+        parser_check = subparsers.add_parser(
+            'check',
+            help="find corrupt or missing picture files")
+        parser_check.set_defaults(func=self.handle_check_cmd)
 
         # 'test' subcommand
         parser_test = subparsers.add_parser(
