@@ -226,6 +226,65 @@ class ViewPicsTests(unittest.TestCase):
         mock_remove_pics.assert_called_with(pic_filenames)
 
 
+class CheckPicsTests(unittest.TestCase):
+
+    def setUp(self):
+        self.connector = MockConnector(urlparse.urlparse('/basedir/repo/'))
+        self.repo = create_mock_repo(self.connector)
+
+        # prepare picture buffers to only consist of picture filename
+        self.connector.connect()
+        for pic in self.repo.index.iterpics():
+            with self.connector.open(pic.filename, 'w') as buf:
+                buf.write(pic.filename)
+        self.connector.disconnect()
+
+    def tearDown(self):
+        pass
+
+    def test_empty_repo(self):
+        r = repo.Repo(index.PictureIndex(), {}, self.connector)
+
+        app = App(self.connector, r)
+        corrupt, missing = app.check_pics()
+
+        self.assertSequenceEqual(corrupt, [])
+        self.assertSequenceEqual(missing, [])
+
+    def test_all_ok(self):
+        app = App(self.connector, self.repo)
+        corrupt, missing = app.check_pics()
+
+        self.assertSequenceEqual(corrupt, [])
+        self.assertSequenceEqual(missing, [])
+
+    def test_all_corrupt(self):
+        # corrupt all picture buffers
+        self.connector.connect()
+        for pic in self.repo.index.iterpics():
+            with self.connector.open(pic.filename, 'w') as buf:
+                buf.write('garbage')
+        self.connector.disconnect()
+
+        app = App(self.connector, self.repo)
+        corrupt, missing = app.check_pics()
+
+        self.assertSequenceEqual(corrupt, [pic.filename
+                                           for pic in self.repo.index.pics()])
+        self.assertSequenceEqual(missing, [])
+
+    def test_all_errored(self):
+        def raise_oserror(*args):
+            raise OSError
+        self.connector.open = raise_oserror
+
+        app = App(self.connector, self.repo)
+        corrupt, missing = app.check_pics()
+
+        self.assertSequenceEqual(corrupt, [])
+        self.assertSequenceEqual(missing, [pic.filename
+                                           for pic in self.repo.index.pics()])
+
 
 if __name__ == "__main__":
     unittest.main()

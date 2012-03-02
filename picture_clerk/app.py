@@ -12,7 +12,7 @@ import config
 from connector import LocalConnector
 from recipe import Recipe
 from repo import Repo
-from picture import Picture
+from picture import Picture, get_sha1
 from pipeline import Pipeline
 from viewer import Viewer
 
@@ -131,6 +131,25 @@ class App(object):
             self.repo.save_config_to_disk()
         finally:
             self.connector.disconnect()
+
+    def check_pics(self):
+        """Verify picture checksums. Return names of corrupt & missing pics."""
+        corrupted = []
+        missing = []
+        try:
+            self.connector.connect()
+            for pic in self.repo.index.pics():
+                try:
+                    with self.connector.open(pic.filename, 'r') as buf:
+                        checksum = get_sha1(buf.read())
+                except (IOError, OSError):
+                    missing.append(pic.filename)
+                else:
+                    if checksum != pic.checksum:
+                        corrupted.append(pic.filename)
+        finally:
+            self.connector.disconnect()
+        return corrupted, missing
 
     def init_repo_logging(self, log_file, log_format):
         # repo file logging (only if repo is local)
