@@ -11,6 +11,7 @@ __copyright__ = "Copyright (c) 2008 Matthias Grueter"
 __license__ = "GPL"
 
 
+import hashlib
 import os.path
 
 
@@ -154,4 +155,7 @@ class Sidecar(object):
 #        path (string)   :   path of sidecar file
 #    """
 #    def __init__(self, path):
-#        Sidecar.__init__(self, path, content_type="Thumbnail")      
+#        Sidecar.__init__(self, path, content_type="Thumbnail") 
+
+def get_sha1(buf):
+    return hashlib.sha1(buf).hexdigest()
