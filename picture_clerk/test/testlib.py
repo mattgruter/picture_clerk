@@ -30,6 +30,9 @@ class MockFile(StringIO.StringIO):
     def __exit__(self, typ, value, traceback):
         self.close()
 
+    def __repr__(self):
+        return self.buf
+
 
 class MockConnector(Connector):
 
@@ -71,7 +74,7 @@ class MockPicture(Picture):
     def __init__(self, filename):
         Picture.__init__(self, filename)
         self.add_sidecar(self.basename + '.thumb.jpg', 'thumbnail')
-        self.checksums = hashlib.sha1(filename).hexdigest()
+        self.checksum = hashlib.sha1(filename).hexdigest()
 
     @classmethod
     def create_many(cls, count, template='DSC_%04i.NEF'):

@@ -140,19 +140,19 @@ class ListPicsTests(unittest.TestCase):
         app = App(self.connector, self.repo)
         expected = '\n'.join(['\n'.join(pic.get_thumbnail_filenames())
                               for pic in self.repo.index.pics()])
-        self.assertSequenceEqual(app.list_pics('thumbnails'), expected)
+        self.assertEqual(app.list_pics('thumbnails'), expected)
 
     def test_list_sidecars(self):
         app = App(self.connector, self.repo)
         expected = '\n'.join(['\n'.join(pic.get_sidecar_filenames())
                               for pic in self.repo.index.pics()])
-        self.assertSequenceEqual(app.list_pics('sidecars'), expected)
+        self.assertEqual(app.list_pics('sidecars'), expected)
 
     def test_list_checksums(self):
         app = App(self.connector, self.repo)
         expected = '\n'.join(['%s *%s' % (pic.checksum, pic.filename)
                               for pic in self.repo.index.pics()])
-        self.assertSequenceEqual(app.list_pics('checksums'), expected)
+        self.assertEqual(app.list_pics('checksums'), expected)
 
 
 class MigrateRepoTests(unittest.TestCase):
