@@ -23,3 +23,11 @@
 or checkout packaging in python3 (see ReadItLater list).
 
 * use dependency injection (e.g. snake-guice): http://www.connorgarvey.com/blog/?p=184
+
+* don't log everything to repo log. log only stuff relevant to repo: pics added/removed/edited, etc
+
+* print sane error messages to CLI if repo is not initialized/unreadable, thumbnails don't exist, etc.
+
+* make Picture, PictureIndex, Config, Repo immutable objects if possible to
+  simplify concurrent processing or use defensive copying if object have to 
+  be mutable.
