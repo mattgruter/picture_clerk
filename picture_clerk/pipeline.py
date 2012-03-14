@@ -108,8 +108,8 @@ class Pipeline():
         """
         [s.join() for s in self.stages]
         self.isactive = False
-        
-    def get_progress(self):
+
+    def get_total_progress(self):
         """
         Determine overall progress by checking size of output queue.
         """
