@@ -164,8 +164,9 @@ class ThumbWorker(Worker):
         # save thumbnail to file
         try:
             thumb_fh = open(thumb_path, 'wb')
-        except IOError:
-            # TODO
+        except (IOError, OSError) as err:
+            self.logger.error("%s (%i): error opening file %s: %s",
+                              self.name, jobnr, thumb_path, err)
             return False
         else:
             with thumb_fh:
