@@ -23,8 +23,8 @@ from stage import Stage
 #    IDLE = 1        # all stages are paused and all buffers are empty
 #    FINISHING = 2   # one or more stages are active and all buffers are empty
 #    CLOGGED = 3     # one or more stage with non-empty buffer is unstaffed    
-    
-    
+
+
 
 # TODO: unit tests
 # TODO: implement some sort of dispatcher to dynamically create or kill threads
@@ -43,7 +43,7 @@ class Pipeline():
         self.num_stages = self.recipe.num_stages
         self.num_stageworkers = config.DEFAULT_NUM_STAGEWORKERS
         # Create buffers before and after each stage (hand-off points)
-        self.buffers = [Queue.Queue() for i in range(self.num_stages+1)]
+        self.buffers = [Queue.Queue() for i in range(self.num_stages + 1)]
         # The input buffer of the pipeline.
         self.input = self.buffers[0]
         # The output buffer of the pipeline
@@ -55,7 +55,7 @@ class Pipeline():
                              WorkerClass=self.recipe.stage_types[i],
                              num_workers=self.num_stageworkers,
                              in_buffer=self.buffers[i],
-                             out_buffer=self.buffers[i+1],
+                             out_buffer=self.buffers[i + 1],
                              seq_number=i,
                              **self.stage_environ) for i in range(self.num_stages)]
         # jobnr is a simple counter of jobs that have been or still are processed
@@ -64,17 +64,17 @@ class Pipeline():
         # FIXME: isactive should be a descriptor and depend on stage's status
         self.isactive = False
 
-        
+
     def put(self, picture):
         """Put a Job object into the pipeline"""
         # FIXME: make access to self.jobnr thread-safe (locking)
         self.jobnr += 1
         self.input.put((picture, self.jobnr))
-        
+
     def get_progress(self):
         """Returns a list of the number of jobs in each queue"""
         return [b.qsize() for b in self.buffers]
-    
+
     def start(self):
         """Start all workers"""
         self.isactive = True
@@ -84,7 +84,7 @@ class Pipeline():
         """Flushes all queues"""
         # TODO: How to flush queues?
         raise(NotImplementedError('Queue flushing'))
-        
+
     def stop(self):
         """
         Stops all workers.
@@ -92,7 +92,7 @@ class Pipeline():
         """
         [s.stop() for s in self.stages]
         self.isactive = False
-        
+
     def abort(self):
         """Immediately terminate all worker threads and flush queues"""
         # FIXME: Is it possible to kill threads?
@@ -100,7 +100,7 @@ class Pipeline():
         print('Aborting is not implemented yet. Stopping instead and flushing queues.')
         self.stop()
         self.flush()
-        
+
     def join(self):
         """
         Finish all pending jobs.
@@ -116,7 +116,7 @@ class Pipeline():
         # TODO: is this accurate enough? it should be. Otherwise we could get
         #       all items from output queue and then count them and add them up.
         return self.output.qsize()
-    
+
 
 # Unit test       
 def _test():

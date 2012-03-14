@@ -44,7 +44,6 @@ class Worker(threading.Thread):
     Worker is a thread class who works on jobs coming from a queue.
 
     Constructor arguments:
-        name (string)           :   unique identifier of worker
         inqueue (Queue.Queue)   :   queue from which worker gets his jobs
         outqueue (Queue.Queue)  :   queue into which worker puts finished jobs
         pool                    :   object to which worker belongs (i.e. Stage)
@@ -65,7 +64,7 @@ class Worker(threading.Thread):
     def _work(self, picture, jobnr):
         pass    # Override me in derived class
         return False
-        
+
     def _compile_sidecar_path(self, picture):
         """
         Returns path and content type of generated sidecar file by the worker
@@ -75,7 +74,7 @@ class Worker(threading.Thread):
             Arguments passed    : picture object
             Arguments returned  : tuple of strings (path, content_type)
         """
-        
+
         pass    # Override me in derived class
         return None
 
@@ -121,16 +120,16 @@ class ThumbWorker(Worker):
     ThumbWorker extracts the thumbnail/preview file from a raw image file with
     help of pyexiv2.
     """
-    
+
     name = 'ThumbWorker'
-    
+
     def _work(self, picture, jobnr):
-        
+
         # create thumbnail subdir if it doesn't already exist
         #@fixme: this isn't thread-safe!
         if not os.path.exists(config.THUMB_SIDECAR_DIR):
             os.mkdir(config.THUMB_SIDECAR_DIR)
-        
+
         metadata = pyexiv2.ImageMetadata(picture.filename)
         metadata.read()
         # pyexiv2 sorts previews by dimensions (ascending), we are only
@@ -138,7 +137,7 @@ class ThumbWorker(Worker):
         thumb = metadata.previews[-1]
         thumb_filename = picture.basename + '.thumb' + thumb.extension
         thumb_path = os.path.join(config.THUMB_SIDECAR_DIR, thumb_filename)
-        
+
         # TODO: save MIME type
 #        thumb_mime_type = thumb.mime_type
 
@@ -148,7 +147,7 @@ class ThumbWorker(Worker):
             thumb_metadata.read()
             # copy all metadata from RAW file to thumbnail
             metadata.copy(thumb_metadata)
-            
+
             # modify EXIF tags for the thumbnail
             # tag: Image Compression
             # TODO: Compression tag should be set according to thumbnail mime
@@ -156,12 +155,12 @@ class ThumbWorker(Worker):
             #       compression tag (e.g. 7 = JPEG).
             thumb_metadata['Exif.Image.Compression'] = 7
             # TODO: should we modify more tags?
-            
+
             thumb_metadata.write()
             thumb_buf = thumb_metadata.buffer
         else:
             thumb_buf = thumb.data
-            
+
         # save thumbnail to file
         try:
             thumb_fh = open(thumb_path, 'wb')
@@ -172,7 +171,7 @@ class ThumbWorker(Worker):
             with thumb_fh:
                 thumb_fh.write(thumb_buf)
             return True
-            
+
     def _compile_sidecar_path(self, picture):
         # FIXME: thumb might have different extension than "jpg", see above's
         #        use of pyexiv2's preview object: "... + thum.extension"
@@ -181,26 +180,26 @@ class ThumbWorker(Worker):
         _filename = picture.basename + '.thumb.jpg'
         _path = os.path.join(config.THUMB_SIDECAR_DIR, _filename)
         _content_type = 'Thumbnail'
-        return (_path, _content_type)    
-     
-            
+        return (_path, _content_type)
+
+
 class MetadataWorker(Worker):
     """
     MetadataWorker extracts metadata from an image and stores values of
     interest in a dictionary of the picture instance.
     """
-    
+
     # FIXME: pyexiv2 doesn't seem to be thread safe...
-    
+
     name = 'MetadataWorker'
-    
+
     def _parse_exif(self, exif_tag):
         if isinstance(exif_tag, pyexiv2.Rational):
             # TODO: convert rational numbers to more sane values (rat, int?)
             return exif_tag.human_value
         else:
             return exif_tag.human_value
-            
+
     def _work(self, picture, jobnr):
         # TODO: catch exceptions of inaccessible files
         _picFname = os.path.join(self.path, picture.filename)
@@ -250,7 +249,7 @@ class HashDigestWorker(Worker):
             #@fixme: this isn't thread-safe!
             if not os.path.exists(config.SHA1_SIDECAR_DIR):
                 os.mkdir(config.SHA1_SIDECAR_DIR)
-            
+
             # write digest to a sidecar file     
             (hashfile_path, contentType) = self._compile_sidecar_path(picture)
             hashfile_path = os.path.join(self.path, hashfile_path)
@@ -263,22 +262,21 @@ class HashDigestWorker(Worker):
                 return False
 
         return True
-        
+
     def _compile_sidecar_path(self, picture):
         _filename = picture.basename + '.sha1'
         _path = os.path.join(config.SHA1_SIDECAR_DIR, _filename)
         _contentType = 'Checksum'
-        return (_path, _contentType)    
+        return (_path, _contentType)
 
 
-# TODO: check return code of subprocess
 class SubprocessWorker(Worker):
     """
     SubprocessWorker class derived from Worker executes external programs.
     """
-    
+
     name = 'SubprocessWorker'
-    
+
     def _compile_commands(self, picture):
         """
         Returns command to be executed together with working directory
@@ -287,13 +285,13 @@ class SubprocessWorker(Worker):
             Arguments passed    : picture object
             Arguments returned  : command line (list of strings)
         """
-        
+
         pass    # Override me in derived class
         return None
-    
+
     def _work(self, picture, jobnr):
         commands = self._compile_commands(picture)
-        
+
         for command in commands:
             try:
                 self.process = subprocess.Popen(command,
@@ -341,28 +339,28 @@ class Exiv2XMPSidecarWorker(SubprocessWorker):
     Exiv2XMPSidecarWorker is a subprocess worker that uses Exiv2 to extract
     metadata to a sidecar XMP file.
     """
-    
+
     name = 'Exiv2XMPSidecarWorker'
     _bin = config.EXIV2_BIN
     _args = ['-e', 'X', 'ex']
-    
+
     def _compile_commands(self, picture):
         cmd = [ self._bin ] + self._args + [ picture.filename ]
         return cmd,
-        
+
     def _compile_sidecar_path(self, picture):
         _filename = picture.basename + '.xmp'
         _path = os.path.join(config.XMP_SIDECAR_DIR, _filename)
         _content_type = 'XMP Metadata'
         return (_path, _content_type)
-       
-       
+
+
 class AutorotWorker(SubprocessWorker):
     """
     AutorotWorker is a subprocess worker using the jhead tool to automatically
     rotate thumbnails according to their EXIF header.
     """
-    
+
     name = 'AutorotWorker'
     _bin = config.JHEAD_BIN
     _args = '-autorot'
@@ -387,13 +385,3 @@ class GitAddWorker(SubprocessWorker):
     def _compile_commands(self, picture):
         cmd = [ self._bin, self._args, picture.filename ]
         return cmd,
-    
-                    
-# Unit test       
-def _test():
-    import doctest
-    doctest.testmod()
-
-if __name__ == "__main__":
-    _test()
-

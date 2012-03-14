@@ -11,7 +11,6 @@ __copyright__ = "Copyright (c) 2008 Matthias Grueter"
 __license__ = "GPL"
 
 
-import Queue
 import threading
 
 from dispatcher import Dispatcher
@@ -52,7 +51,7 @@ class Stage():
     def remove_worker(self):
         self.workers.pop().join()
         self.num_woker -= 1
-        
+
     def start(self):
         # Global activity flag
         self.isactive = True
@@ -74,7 +73,7 @@ class Stage():
         """
         self.isactive = False
         self.dispatcher.join()
-        
+
     def join(self):
         """
         Block until the input queue is empty.    
@@ -82,8 +81,8 @@ class Stage():
         self.input.join()
         self.isactive = False
         self.dispatcher.join()
-        
-        
+
+
 # Unit test       
 def _test():
     import doctest
