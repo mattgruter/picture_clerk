@@ -310,29 +310,6 @@ class SubprocessWorker(Worker):
                 return False
 
         return True
-        
-        
-class DCRawThumbWorker(SubprocessWorker):
-    """
-    DCRawThumbWorker is a subprocess worker that uses DCRaw to extract
-    a thumbnail to a sidecar file.
-    """
-    
-    name = 'DCRawThumbWorker'
-    _bin = config.DCRAW_BIN
-    _args = '-e'
-    
-    def _compile_commands(self, picture):
-        cmd1 = [ self._bin, self._args, picture.filename ]
-#        cmd2 = [ "mv", os.path.basename]
-#        return cmd1, cmd2
-        return cmd1, 
-        
-    def _compile_sidecar_path(self, picture):
-        _filename = picture.basename + '.thumb.jpg'
-        _path = os.path.join(config.THUMB_SIDECAR_DIR, _filename)
-        _content_type = 'Thumbnail'
-        return (_path, _content_type)    
 
 
 class Exiv2XMPSidecarWorker(SubprocessWorker):
@@ -365,24 +342,7 @@ class AutorotWorker(SubprocessWorker):
     name = 'AutorotWorker'
     _bin = config.JHEAD_BIN
     _args = '-autorot'
-    
+
     def _compile_commands(self, picture):
         cmd = [ self._bin, self._args, picture.thumbnail ]
-        return cmd,
-
-        
-class GitAddWorker(SubprocessWorker):
-    """
-    GitAddWorker adds pictures to a git repository
-    """
-    
-    # FIXME: Only one git instance can work on repository -> git repo lock.
-    # TODO: Git would be many times faster if it worked on several pictures at once.
-    
-    name = 'GitAddWorker'
-    _bin = config.GIT_BIN
-    _args = 'add'
-    
-    def _compile_commands(self, picture):
-        cmd = [ self._bin, self._args, picture.filename ]
         return cmd,
