@@ -158,7 +158,7 @@ class CLI(object):
         # 'remove' subcommand
         parser_remove = subparsers.add_parser(
             'remove',
-            help="remove pictures from repository")
+            help="remove pictures and associated files")
         parser_remove.add_argument(
             'files',
             metavar='file',
