@@ -14,7 +14,6 @@ __license__ = "GPL"
 import Queue
 import threading
 
-import config
 from dispatcher import Dispatcher
 
 
@@ -30,7 +29,7 @@ class Stage():
     """
 
     def __init__(self, name, WorkerClass, num_workers, in_buffer,
-                 out_buffer, seq_number, pipeline, path, logdir=None):
+                 out_buffer, seq_number, pipeline, path):
         self.name = name
         self.WorkerClass = WorkerClass
         self.num_workers = num_workers
@@ -38,7 +37,7 @@ class Stage():
         self.input = in_buffer
         self.output = out_buffer
         self.seq_number = seq_number
-        self.worker_environ = dict(pool=self, path=path, logdir=logdir)
+        self.worker_environ = dict(pool=self, path=path)
         self.isactive = False
         self.progress = 0
 

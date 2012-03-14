@@ -18,8 +18,11 @@ import subprocess
 import time
 import hashlib
 import pyexiv2
+import logging
 
 import config
+
+log = logging.getLogger('pic.worker')
 
 
 #class WorkerState():
@@ -46,24 +49,19 @@ class Worker(threading.Thread):
         outqueue (Queue.Queue)  :   queue into which worker puts finished jobs
         pool                    :   object to which worker belongs (i.e. Stage)
         path (string)           :   path in which the worker is to base its work
-        logpath (string)        :   logfile path
     """
 
     name = 'Worker'
 
-    def __init__(self, inqueue, outqueue, number, pool, path, logdir):
+    def __init__(self, inqueue, outqueue, number, pool, path):
         threading.Thread.__init__(self)
         self.inqueue = inqueue
         self.outqueue = outqueue
         self.number = number
         self.pool = pool
         self.path = path
-        if logdir:
-            self.logging = True
-            self.logdir = logdir
-        else:
-            self.logging = False
-        
+        self.logger = logging.getLogger("%s-%i" % (self.name, self.number))
+
     def _work(self, picture, jobnr):
         pass    # Override me in derived class
         return False
@@ -80,64 +78,44 @@ class Worker(threading.Thread):
         
         pass    # Override me in derived class
         return None
-        
-    def _init_logging(self):
-        if self.logging:
-            abs_logdir = os.path.join(self.path, self.logdir)
-            if not os.path.exists(abs_logdir):
-                os.mkdir(abs_logdir)
-            
-            _logfile = os.path.join(abs_logdir, self.name + str(self.number) + '.log')
-            self.outlog_handle=open(_logfile, 'w', 0)   # unbuffered
-            _errfile = os.path.join(abs_logdir, self.name + str(self.number) + '.err')
-            self.errlog_handle=open(_errfile, 'w', 0)   # unbuffered
-        else:
-            self.outlog_handle = None
-            self.errlog_handle = None
-        
-    def _end_logging(self):
-        # Closing logging file handles    
-        self.outlog_handle.close()
-        self.errlog_handle.close()
 
     def run(self):
-        self._init_logging()
-        if self.logging: print >>self.outlog_handle, 'Starting up...'
-        
-        try:
-            while True:
-                self.pool.wakeSignal.wait()
-                if not self.pool.isactive:
-                    if self.logging: print >>self.outlog_handle, 'Terminating. Bye bye.'
-                    break
-                try:
-                    # get next queue item, block for WORKER_TIMEOUT seconds if empty
-                    (picture, jobnr) = self.inqueue.get(True, config.WORKER_TIMEOUT)
-                except Queue.Empty:
-                    pass    # try again
-                    
+        self.logger.info("Thread %s starting up...", self.name)
+
+        while True:
+            self.pool.wakeSignal.wait()
+            if not self.pool.isactive:
+                self.logger.info("Thread %s terminating. Bye bye.", self.name)
+                break
+            try:
+                # get next queue item, block for WORKER_TIMEOUT seconds if empty
+                (picture, jobnr) = self.inqueue.get(True, config.WORKER_TIMEOUT)
+            except Queue.Empty:
+                pass    # try again
+
+            else:
+                self.logger.info("%s loading %s...",
+                                 self.name, picture.filename)
+                self.logger.info("%s starting job %i", self.name, jobnr)
+                if self._work(picture, jobnr):
+                    self.logger.info("%s, job %i done", self.name, jobnr)
+                    self.outqueue.put((picture, jobnr))
+                    self.logger.info("%s done with %s",
+                                     self.name, picture.filename)
+                    # TODO: make history more useful: exact job performed, timestamp, etc.
+                    # FIXME: this has to be thread safe (it is now because a
+                    #        every picture is worked on by only one worker but if
+                    #        we introduce parallel stages or piplines then we have
+                    #        to fix this.)
+                    picture.history.append((self.name, time.ctime()))
+                    sidecar = self._compile_sidecar_path(picture)
+                    if sidecar:
+                        picture.add_sidecar(*sidecar)
+                    self.inqueue.task_done()
                 else:
-                    if self.logging: print >>self.outlog_handle, 'Loading %s...' % picture.filename
-                    if self._work(picture, jobnr):   
-                        self.outqueue.put((picture, jobnr))
-                        if self.logging: print >>self.outlog_handle, 'DONE %s' % picture.filename
-                        # TODO: make history more useful: exact job performed, timestamp, etc.
-                        # FIXME: this has to be thread safe (it is now because a
-                        #        every picture is worked on by only one worker but if
-                        #        we introduce parallel stages or piplines then we have
-                        #        to fix this.)
-                        picture.history.append((self.name, time.ctime()))
-                        sidecar = self._compile_sidecar_path(picture)
-                        if sidecar:
-                            picture.add_sidecar(*sidecar)
-                        self.inqueue.task_done()
-                    else:
-                        raise(Exception('Worker failed to complete job'))
-        finally:
-            # ensure that _end_logging method is always called
-            if self.logging: self._end_logging()
-            
-     
+                    self.logger.error("%s, job %i failed!", self.name, jobnr)
+
+
 class ThumbWorker(Worker):
     """
     ThumbWorker extracts the thumbnail/preview file from a raw image file with
@@ -224,9 +202,7 @@ class MetadataWorker(Worker):
             return exif_tag.human_value
             
     def _work(self, picture, jobnr):
-        # TODO: catch exceptions of not accessible files
-        # TODO: fix logging to file
-#        print self.name, "(", jobnr, "): ..."
+        # TODO: catch exceptions of inaccessible files
         _picFname = os.path.join(self.path, picture.filename)
         _keys = ['Exif.Photo.ExposureTime', 'Exif.Photo.FNumber',
                  'Exif.Photo.ExposureProgram', 'Exif.Photo.ISOSpeedRatings',
@@ -241,8 +217,8 @@ class MetadataWorker(Worker):
             metadata = pyexiv2.ImageMetadata(_picFname)
             metadata.read()
         except IOError:
-            # How should this be handled?
-            print 'File not found: %s' % _picFname
+            self.logger.error("%s (%i): file not found: %s", _picFname)
+            return False
         # TODO: better way to copy part of a dictionary?
         for k in _keys:
             try:
@@ -251,26 +227,20 @@ class MetadataWorker(Worker):
                 picture.metadata[k] = None
             except IOError:
                 picture.metadata[k] = None
-                
-        # TODO: fix logging to file
-#        print self.name, "(", jobnr, "): Ok."
 
-        # FIXME: Return something useful
         return True
-            
+
 
 class HashDigestWorker(Worker):
     """
     HashDigestWorker class derived from Worker calculates hash digests of
     picture files.
     """
-    
+
     name = 'HashDigestWorker'
-    
+
     def _work(self, picture, jobnr):
-        # TODO: catch exceptions of not accessible files
-        # TODO: fix logging to file
-#        print self.name, "(", jobnr, "): ..."
+        # TODO: catch exceptions of inaccessible files
         with open(os.path.join(self.path, picture.filename), 'rb') as pic:
             buf = pic.read()
         digest = hashlib.sha1(buf).hexdigest()
@@ -288,14 +258,10 @@ class HashDigestWorker(Worker):
                 with open(hashfile_path, 'w') as f:
                     f.write(digest + ' *' + picture.filename + '\n')
             except IOError as err:
-                if self.logging:
-                    print >>self.errlog_handle, self.name, "(", jobnr, "): ", \
-                        "ERROR - error writing to file ", hashfile_path, \
-                        "(", err, ")"
-        # TODO: fix logging to file
-#        print self.name, "(", jobnr, "): Ok."
+                self.logger.error("%s (%i): error writing to file %s (%s)",
+                                  self.name, jobnr, hashfile_path, err)
+                return False
 
-        # FIXME: Return something useful
         return True
         
     def _compile_sidecar_path(self, picture):
@@ -330,24 +296,20 @@ class SubprocessWorker(Worker):
         
         for command in commands:
             try:
-                # FIXME: use Python's logging facility (thread-safe)
-                self.process = subprocess.Popen(command, shell=False, cwd=self.path,
-                                                stdout=self.outlog_handle,
-                                                stderr=self.errlog_handle)
-                                                
-#                # TODO: fix logging to file
-#                print self.name, "(", jobnr, "): ..."
+                self.process = subprocess.Popen(command,
+                                                shell=False,
+                                                cwd=self.path)
+
                 retcode = self.process.wait()
                 if retcode < 0:
-                    if self.logging: print >>self.errlog_handle, self.name, "(", jobnr, "): ERROR - ", command, " terminated with signal", -retcode
-                else:
-#                    # TODO: fix logging to file
-#                    print self.name, "(", jobnr, "): Ok."
-                    pass
+                    self.logger.error("%s (%i): '%s' terminated with signal %s",
+                                      self.name, jobnr, command, retcode)
+                    return False
             except OSError, e:
-                if self.logging: print >>self.errlog_handle, self.name, "(", jobnr, "): ERROR - ", command, " execution failed:", e
-            
-        # FIXME: Return something useful
+                self.logger.error("%s (%i): '%s' execution failed: %s",
+                                  self.name, jobnr, command, e)
+                return False
+
         return True
         
         

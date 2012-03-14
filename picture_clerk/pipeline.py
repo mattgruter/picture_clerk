@@ -35,8 +35,8 @@ class Pipeline():
     """
     Pipeline defines the stages of the workflow.
     """
-    
-    def __init__(self, name, recipe, path, logdir=None):
+
+    def __init__(self, name, recipe, path):
         self.name = name
         # recipe defining the sequence of jobs to be performed
         self.recipe = recipe
@@ -49,7 +49,7 @@ class Pipeline():
         # The output buffer of the pipeline
         self.output = self.buffers[-1]
         # Stage environment variables
-        self.stage_environ = dict(pipeline=self, path=path, logdir=logdir)
+        self.stage_environ = dict(pipeline=self, path=path)
         # Create stages and connect them to the buffers
         self.stages = [Stage(name=self.recipe.stage_names[i],
                              WorkerClass=self.recipe.stage_types[i],

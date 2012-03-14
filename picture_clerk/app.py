@@ -60,8 +60,7 @@ class App(object):
                 process_recipe = Recipe.fromString(
                                            self.repo.config['recipes.default'])
             pl = Pipeline('Pipeline1', process_recipe,
-                          path=self.connector.url.path,
-                          logdir=config.LOGDIR)
+                          path=self.connector.url.path)
             for pic in pics:
                 pl.put(pic)
             # process pictures
