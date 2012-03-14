@@ -59,7 +59,7 @@ class Repo(object):
     def load_config_from_disk(self):
         """Load configuration from disk."""
         log.info("Loading repository configuration.")
-        self.config = config.Config(config.REPO_CONFIG)
+        self.config = config.new_repo_config()
         with self.connector.open(config.CONFIG_FILE, 'r') as config_fh:
             self.config.read(config_fh)
 

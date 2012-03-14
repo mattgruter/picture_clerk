@@ -22,7 +22,7 @@ def create_mock_repo(connector):
     pi.add(MockPicture.create_many(20))
 
     # test config
-    conf = config.Config(config.REPO_CONFIG)
+    conf = config.new_repo_config()
     conf['index.file'] = ".pic/testindex"
     conf['test.test'] = "foo"
 
@@ -47,7 +47,7 @@ class InitRepoTests(unittest.TestCase):
         # load initializied repo from disk and check index & config
         r = repo.Repo.load_from_disk(self.connector)
         # repo config should be default config
-        self.assertEqual(r.config, config.Config(config.REPO_CONFIG))
+        self.assertEqual(r.config, config.new_repo_config())
         # repo index should be empty
         self.assertEqual(r.index, index.PictureIndex())
 

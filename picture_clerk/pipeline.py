@@ -41,7 +41,7 @@ class Pipeline():
         # recipe defining the sequence of jobs to be performed
         self.recipe = recipe
         self.num_stages = self.recipe.num_stages
-        self.num_stageworkers = config.DEFAULT_NUM_STAGEWORKERS
+        self.num_stageworkers = config.STAGE_SIZE
         # Create buffers before and after each stage (hand-off points)
         self.buffers = [Queue.Queue() for i in range(self.num_stages + 1)]
         # The input buffer of the pipeline.

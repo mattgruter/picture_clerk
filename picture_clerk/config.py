@@ -1,25 +1,17 @@
-"""config.py
-
-PictureClerk - The little helper for your picture workflow.
-This file contains global configurations
 """
+@author: Matthias Grueter <matthias@grueter.name>
+@copyright: Copyright (c) 2012 Matthias Grueter
+@license: GPL
 
-__author__ = "Matthias Grueter (matthias@grueter.name)"
-__version__ = "$Revision: 0.1 $"
-__date__ = "$Date: 2008/11/18 $"
-__copyright__ = "Copyright (c) 2008 Matthias Grueter"
-__license__ = "GPL"
-
-
+"""
 import os.path
 import logging
 import ConfigParser
 import collections
 
-# application name
-APP_NAME = "PictureClerk"
+
+## application level defaults
 APP_SHORT_NAME = "pic"
-APP_EXEC_NAME = "pic"
 
 # application global config/log directory
 APP_DIR = os.path.join(os.path.expanduser('~'), '.' + APP_SHORT_NAME)
@@ -28,24 +20,20 @@ APP_DIR = os.path.join(os.path.expanduser('~'), '.' + APP_SHORT_NAME)
 APP_LOG_FILE = os.path.join(APP_DIR, 'log')
 
 # number of workers in each stage by default
-DEFAULT_NUM_STAGEWORKERS = 1
+STAGE_SIZE = 1
 
 # number of seconds a worker should wait for new jobs if queue is empty
 WORKER_TIMEOUT = 1
 
-# full path to DCRaw executable
-DCRAW_BIN = '/usr/bin/dcraw'
-# full path to git executable
-GIT_BIN = '/usr/bin/git'
-# full path to exiv2 executable
+# path to exiv2 executable (used by Exiv2XMPSidecarWorker)
 EXIV2_BIN = '/usr/bin/exiv2'
-# full path to jhead executable
+
+# path to jhead executable (used by AutorotWorker)
 JHEAD_BIN = '/usr/bin/jhead'
 
-# file pattern for import
-IMPORT_FILE_PATTERN = '*.NEF'
 
-# PictureClerk directory
+## repo level defaults
+# PictureClerk repo directory
 PIC_DIR = ".pic"
 
 # config file
@@ -57,10 +45,6 @@ INDEX_FILE = os.path.join(PIC_DIR, "index")
 # index format version
 INDEX_FORMAT_VERSION = 1
 
-# worker logging on/off
-LOGGING = True
-LOGDIR = os.path.join(PIC_DIR, "log")
-
 # repo logging
 REPO_LOG_FILE = os.path.join(PIC_DIR, "log.txt")
 REPO_LOG_LEVEL = logging.DEBUG
@@ -70,9 +54,8 @@ REPO_LOG_FORMAT = '%%(asctime)s %%(name)-15s %%(levelname)-8s %%(message)s'
 SHA1_SIDECAR_ENABLED = 1
 SHA1_SIDECAR_DIR = os.path.join(PIC_DIR, "sha1")
 
-# ThumbWorker configuration
+# thumbnail configuration
 THUMB_SIDECAR_DIR = "jpg"
-THUMB_COPY_METADATA = 1
 
 # XMP metadata sidecar file destination
 XMP_SIDECAR_DIR = os.path.join(PIC_DIR, "xmp")
@@ -83,19 +66,10 @@ DEFAULT_RECIPE = "HashDigestWorker, ThumbWorker, AutorotWorker, MetadataWorker"
 # viewer
 VIEWER_CMD = "qiv -m -t"
 
-REPO_CONFIG = {
-    'index.file': INDEX_FILE,
-    'index.format_version': INDEX_FORMAT_VERSION,
-    'recipes.default': DEFAULT_RECIPE,
-    'thumbnails.sidecar_dir': THUMB_SIDECAR_DIR,
-    'thumbnails.copy_metadata': THUMB_COPY_METADATA,
-    'checksums.sidecar_enabled': SHA1_SIDECAR_ENABLED,
-    'checksums.sidecar_dir': SHA1_SIDECAR_DIR,
-    'logging.file': REPO_LOG_FILE,
-    'logging.level': REPO_LOG_LEVEL,
-    'logging.format': REPO_LOG_FORMAT,
-    'viewer.prog': VIEWER_CMD,
-               }
+# thumbnail metadata sync
+#@todo: remove this option, doesn't have to be configurable
+THUMB_COPY_METADATA = 1
+
 
 class Config(collections.MutableMapping):
     """
@@ -212,3 +186,35 @@ class Config(collections.MutableMapping):
                 conf[key] = value
         return conf
 
+
+def new_app_config():
+    """Return default app configuration (Config instance)."""
+
+    APP_CONFIG = {
+        'logging.file': APP_LOG_FILE,
+        'pipeline.stagesize': STAGE_SIZE,
+        'pipeline.workertimeout': WORKER_TIMEOUT,
+        'tools.exiv2': EXIV2_BIN,
+        'tools.jhead': JHEAD_BIN,
+                }
+
+    return Config(APP_CONFIG)
+
+def new_repo_config():
+    """Return default repo configuration (Config instance)."""
+
+    REPO_CONFIG = {
+        'index.file': INDEX_FILE,
+        'index.format_version': INDEX_FORMAT_VERSION,
+        'recipes.default': DEFAULT_RECIPE,
+        'thumbnails.sidecar_dir': THUMB_SIDECAR_DIR,
+        'thumbnails.copy_metadata': THUMB_COPY_METADATA,
+        'checksums.sidecar_enabled': SHA1_SIDECAR_ENABLED,
+        'checksums.sidecar_dir': SHA1_SIDECAR_DIR,
+        'logging.file': REPO_LOG_FILE,
+        'logging.level': REPO_LOG_LEVEL,
+        'logging.format': REPO_LOG_FORMAT,
+        'viewer.prog': VIEWER_CMD,
+               }
+
+    return Config(REPO_CONFIG)

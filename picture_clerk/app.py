@@ -27,7 +27,7 @@ class App(object):
 
     def init_repo(self):
         """Initialize new repository."""
-        repo_config = config.Config.from_dict(config.REPO_CONFIG)
+        repo_config = config.new_repo_config()
         self.repo = Repo.create_on_disk(self.connector, repo_config)
         self.init_repo_logging(repo_config['logging.file'],
                                repo_config['logging.format'])

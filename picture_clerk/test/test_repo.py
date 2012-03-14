@@ -41,7 +41,7 @@ class LoadTests(unittest.TestCase):
         self.connector = MockConnector(urlparse.urlparse('/baseurl/repo/'))
         self.pi = index.PictureIndex()
         self.pi.add(MockPicture.create_many(10))
-        self.conf = config.Config(config.REPO_CONFIG)
+        self.conf = config.new_repo_config()
         self.conf['index.file'] = 'mock-index-path'
         Repo.create_on_disk(self.connector, self.conf, self.pi)
         self.connector.connect()
@@ -98,7 +98,7 @@ class SaveTests(unittest.TestCase):
         self.connector = MockConnector(urlparse.urlparse('/baseurl/repo/'))
         self.pi = index.PictureIndex()
         self.pi.add(MockPicture.create_many(10))
-        self.conf = config.Config(config.REPO_CONFIG)
+        self.conf = config.new_repo_config()
         self.conf['index.file'] = 'mock-index-path'
         self.connector.connect()
 
@@ -132,7 +132,7 @@ class FactoryTests(unittest.TestCase):
         self.connector = MockConnector(urlparse.urlparse('/baseurl/repo/'))
         self.pi = index.PictureIndex()
         self.pi.add(MockPicture.create_many(10))
-        self.conf = config.Config(config.REPO_CONFIG)
+        self.conf = config.new_repo_config()
         self.conf['index.file'] = 'mock-index-path'
 
     def test_create_on_disk_empty(self):
