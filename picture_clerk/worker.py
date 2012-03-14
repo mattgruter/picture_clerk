@@ -138,29 +138,23 @@ class ThumbWorker(Worker):
         thumb_filename = picture.basename + '.thumb' + thumb.extension
         thumb_path = os.path.join(config.THUMB_SIDECAR_DIR, thumb_filename)
 
-        # TODO: save MIME type
+        # @todo: save MIME type
 #        thumb_mime_type = thumb.mime_type
 
-        # copy metadata from RAW file to thumbnail (if enabled in config)
-        if config.THUMB_COPY_METADATA:
-            thumb_metadata = pyexiv2.ImageMetadata.from_buffer(thumb.data)
-            thumb_metadata.read()
-            # copy all metadata from RAW file to thumbnail
-            metadata.copy(thumb_metadata)
+        # copy metadata from RAW file to thumbnail
+        thumb_metadata = pyexiv2.ImageMetadata.from_buffer(thumb.data)
+        thumb_metadata.read()
+        metadata.copy(thumb_metadata)
 
-            # modify EXIF tags for the thumbnail
-            # tag: Image Compression
-            # TODO: Compression tag should be set according to thumbnail mime
-            #       type. See http://exiv2.org/tags.html for information on the
-            #       compression tag (e.g. 7 = JPEG).
-            thumb_metadata['Exif.Image.Compression'] = 7
-            # TODO: should we modify more tags?
+        # modify EXIF tags for the thumbnail
+        # tag: Image Compression (JPEG => 7)
+        # @todo: Image Compression should be set according to MIME type
+        #        (see http://exiv2.org/tags.html)
+        # @todo: should more tags be modified?
+        thumb_metadata['Exif.Image.Compression'] = 7
 
-            thumb_metadata.write()
-            thumb_buf = thumb_metadata.buffer
-        else:
-            thumb_buf = thumb.data
-
+        thumb_metadata.write()
+        thumb_buf = thumb_metadata.buffer
         # save thumbnail to file
         try:
             thumb_fh = open(thumb_path, 'wb')

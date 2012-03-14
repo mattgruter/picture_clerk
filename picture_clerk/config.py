@@ -66,10 +66,6 @@ DEFAULT_RECIPE = "HashDigestWorker, ThumbWorker, AutorotWorker, MetadataWorker"
 # viewer
 VIEWER_CMD = "qiv -m -t"
 
-# thumbnail metadata sync
-#@todo: remove this option, doesn't have to be configurable
-THUMB_COPY_METADATA = 1
-
 
 class Config(collections.MutableMapping):
     """
@@ -208,7 +204,6 @@ def new_repo_config():
         'index.format_version': INDEX_FORMAT_VERSION,
         'recipes.default': DEFAULT_RECIPE,
         'thumbnails.sidecar_dir': THUMB_SIDECAR_DIR,
-        'thumbnails.copy_metadata': THUMB_COPY_METADATA,
         'checksums.sidecar_enabled': SHA1_SIDECAR_ENABLED,
         'checksums.sidecar_dir': SHA1_SIDECAR_DIR,
         'logging.file': REPO_LOG_FILE,
