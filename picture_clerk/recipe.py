@@ -1,16 +1,11 @@
-"""recipe.py
-
-PictureClerk - The little helper for your picture workflow.
-This file contains the Recipe class
 """
+@author: Matthias Grueter <matthias@grueter.name>
+@copyright: Copyright (c) 2012 Matthias Grueter
+@license: GPL
 
-__author__ = "Matthias Grueter (matthias@grueter.name)"
-__version__ = "$Revision: 0.1 $"
-__date__ = "$Date: 2008/11/18 $"
-__copyright__ = "Copyright (c) 2008 Matthias Grueter"
-__license__ = "GPL"
-
+"""
 import worker
+
 
 class Recipe():
     """
@@ -21,25 +16,25 @@ class Recipe():
         (self.stage_names, self.stage_types) = self._parse_instructions(instructions)
 #        self.stage_jobs = _parse_instructions(instructions)     
         self.num_stages = len(instructions)
-        
-        
+
+
     def _parse_instructions(self, instructions):
         """Create stage specifications from given instructions."""
         # TODO: How should instructions look like?
         return (instructions, instructions)
-        
+
     def __str__(self):
         string = []
         for i, stage in enumerate(self.stage_names):
-            string.append('%i: %s' % (i+1, stage))
+            string.append('%i: %s' % (i + 1, stage))
         return '\n'.join(string)
-        
+
     def __repr__(self):
         return str(self)
-    
+
     @classmethod
     def fromString(cls, list_as_string):
         return Recipe([eval(s.strip(), worker.__dict__)
                        for s in list_as_string.split(',')])
 
-    
+

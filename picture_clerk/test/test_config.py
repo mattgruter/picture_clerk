@@ -1,9 +1,8 @@
 """
-Created on 2012/02/12
-
 @author: Matthias Grueter <matthias@grueter.name>
-@copyright: Copyright (c) 2011 Matthias Grueter
+@copyright: Copyright (c) 2012 Matthias Grueter
 @license: GPL
+
 """
 import unittest
 import mock

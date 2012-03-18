@@ -1,12 +1,9 @@
 """
-Created on 2011/04/24
-
 @author: Matthias Grueter <matthias@grueter.name>
 @copyright: Copyright (c) 2012 Matthias Grueter
 @license: GPL
 
 """
-
 import os
 import urlparse
 import logging
@@ -17,6 +14,7 @@ from abc import ABCMeta, abstractmethod
 
 
 log = logging.getLogger('pic.connector')
+
 
 class NotConnectedError(Exception):
     pass

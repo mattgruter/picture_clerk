@@ -10,6 +10,7 @@ import os
 
 log = logging.getLogger('pic.viewer')
 
+
 class Viewer(object):
 
     def __init__(self, prog):

@@ -1,16 +1,9 @@
-"""picture.py
-
-PictureClerk - The little helper for your picture workflow.
-This file contains the Picture class
 """
+@author: Matthias Grueter <matthias@grueter.name>
+@copyright: Copyright (c) 2012 Matthias Grueter
+@license: GPL
 
-__author__ = "Matthias Grueter (matthias@grueter.name)"
-__version__ = "$Revision: 0.1 $"
-__date__ = "$Date: 2008/11/18 $"
-__copyright__ = "Copyright (c) 2008 Matthias Grueter"
-__license__ = "GPL"
-
-
+"""
 import hashlib
 import os.path
 

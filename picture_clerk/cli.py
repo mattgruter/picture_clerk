@@ -16,6 +16,7 @@ from connector import Connector
 
 log = logging.getLogger('pic.cli')
 
+
 class CLI(object):
     """PictureClerk's command line interface."""
 

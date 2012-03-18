@@ -2,6 +2,7 @@
 @author: Matthias Grueter <matthias@grueter.name>
 @copyright: Copyright (c) 2012 Matthias Grueter
 @license: GPL
+
 """
 import unittest
 

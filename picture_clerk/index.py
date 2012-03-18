@@ -1,17 +1,16 @@
 """
-Created on 2011/08/09
-
 @author: Matthias Grueter <matthias@grueter.name>
-@copyright: Copyright (c) 2011 Matthias Grueter
+@copyright: Copyright (c) 2012 Matthias Grueter
 @license: GPL
-"""
 
+"""
 import collections
 import cPickle as pickle
 import logging
 
 
 log = logging.getLogger('pic.index')
+
 
 class PictureAlreadyIndexedError(Exception):
     def __init__(self, pic):
