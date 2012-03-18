@@ -1,9 +1,8 @@
 """
-Created on 2011/08/09
-
 @author: Matthias Grueter <matthias@grueter.name>
-@copyright: Copyright (c) 2011 Matthias Grueter
+@copyright: Copyright (c) 2012 Matthias Grueter
 @license: GPL
+
 """
 import unittest
 import mock
@@ -11,6 +10,7 @@ import urlparse
 
 import config
 import index
+import repo
 
 from testlib import MockConnector, MockPicture
 from index import PictureIndex
@@ -41,7 +41,7 @@ class LoadTests(unittest.TestCase):
         self.connector = MockConnector(urlparse.urlparse('/baseurl/repo/'))
         self.pi = index.PictureIndex()
         self.pi.add(MockPicture.create_many(10))
-        self.conf = config.new_repo_config()
+        self.conf = repo.new_repo_config()
         self.conf['index.file'] = 'mock-index-path'
         Repo.create_on_disk(self.connector, self.conf, self.pi)
         self.connector.connect()
@@ -50,46 +50,46 @@ class LoadTests(unittest.TestCase):
         self.connector.disconnect()
 
     def test_load_config_from_disk(self):
-        repo = Repo(index={}, config={}, connector=self.connector)
-        repo.load_config_from_disk()
+        r = Repo(index={}, config={}, connector=self.connector)
+        r.load_config_from_disk()
 
-        self.assertEqual(repo.config, self.conf)
-        self.assertIsNot(repo.config, self.conf)
-        self.assertEqual(repo.index, {})
+        self.assertEqual(r.config, self.conf)
+        self.assertIsNot(r.config, self.conf)
+        self.assertEqual(r.index, {})
 
     def test_load_index_from_disk(self):
-        repo = Repo(index={}, config=self.conf, connector=self.connector)
-        repo.load_index_from_disk()
+        r = Repo(index={}, config=self.conf, connector=self.connector)
+        r.load_index_from_disk()
 
-        self.assertEqual(repo.index, self.pi)
-        self.assertIsNot(repo.index, self.pi)
+        self.assertEqual(r.index, self.pi)
+        self.assertIsNot(r.index, self.pi)
 
     def test_load_index_version_current(self):
-        repo = Repo(index={}, config=self.conf, connector=self.connector)
-        repo.load_index_from_disk(config.INDEX_FORMAT_VERSION)
+        r = Repo(index={}, config=self.conf, connector=self.connector)
+        r.load_index_from_disk(repo.INDEX_FORMAT_VERSION)
 
-        self.assertEqual(repo.index, self.pi)
-        self.assertIsNot(repo.index, self.pi)
+        self.assertEqual(r.index, self.pi)
+        self.assertIsNot(r.index, self.pi)
 
     def test_load_index_version_1(self):
-        repo = Repo(index={}, config=self.conf, connector=self.connector)
-        repo.load_index_from_disk(1)
+        r = Repo(index={}, config=self.conf, connector=self.connector)
+        r.load_index_from_disk(1)
 
-        self.assertEqual(repo.index, self.pi)
-        self.assertIsNot(repo.index, self.pi)
+        self.assertEqual(r.index, self.pi)
+        self.assertIsNot(r.index, self.pi)
 
     def test_load_index_version_too_low(self):
-        repo = Repo(index={}, config=self.conf, connector=self.connector)
+        r = Repo(index={}, config=self.conf, connector=self.connector)
 
-        self.assertRaises(KeyError, repo.load_index_from_disk, 0)
+        self.assertRaises(KeyError, r.load_index_from_disk, 0)
 
     def test_load_version_mismatch_error(self):
-        repo = Repo(index={}, config=self.conf, connector=self.connector)
+        r = Repo(index={}, config=self.conf, connector=self.connector)
 
         with self.assertRaises(VersionMismatchError) as cm:
-            repo.load_index_from_disk(99)
+            r.load_index_from_disk(99)
         self.assertEqual(cm.exception.actual, 99)
-        self.assertEqual(cm.exception.expected, config.INDEX_FORMAT_VERSION)
+        self.assertEqual(cm.exception.expected, repo.INDEX_FORMAT_VERSION)
 
 
 class SaveTests(unittest.TestCase):
@@ -98,7 +98,7 @@ class SaveTests(unittest.TestCase):
         self.connector = MockConnector(urlparse.urlparse('/baseurl/repo/'))
         self.pi = index.PictureIndex()
         self.pi.add(MockPicture.create_many(10))
-        self.conf = config.new_repo_config()
+        self.conf = repo.new_repo_config()
         self.conf['index.file'] = 'mock-index-path'
         self.connector.connect()
 
@@ -106,18 +106,18 @@ class SaveTests(unittest.TestCase):
         self.connector.disconnect()
 
     def test_save_config_to_disk(self):
-        repo = Repo(self.pi, self.conf, self.connector)
-        repo.save_config_to_disk()
+        r = Repo(self.pi, self.conf, self.connector)
+        r.save_config_to_disk()
 
-        self.assertTrue(self.connector.opened(config.CONFIG_FILE))
+        self.assertTrue(self.connector.opened(repo.CONFIG_FILE))
         config_on_disk = config.Config()
-        config_on_disk.read(self.connector.get_file(config.CONFIG_FILE))
+        config_on_disk.read(self.connector.get_file(repo.CONFIG_FILE))
         self.assertEqual(config_on_disk, self.conf)
         self.assertIsNot(config_on_disk, self.conf)
 
     def test_save_index_to_disk(self):
-        repo = Repo(self.pi, self.conf, self.connector)
-        repo.save_index_to_disk()
+        r = Repo(self.pi, self.conf, self.connector)
+        r.save_index_to_disk()
 
         self.assertTrue(self.connector.opened('mock-index-path'))
         index_on_disk = index.PictureIndex()
@@ -132,22 +132,22 @@ class FactoryTests(unittest.TestCase):
         self.connector = MockConnector(urlparse.urlparse('/baseurl/repo/'))
         self.pi = index.PictureIndex()
         self.pi.add(MockPicture.create_many(10))
-        self.conf = config.new_repo_config()
+        self.conf = repo.new_repo_config()
         self.conf['index.file'] = 'mock-index-path'
 
     def test_create_on_disk_empty(self):
-        repo = Repo.create_on_disk(self.connector, self.conf)
+        r = Repo.create_on_disk(self.connector, self.conf)
 
         # test repo
-        self.assertIsInstance(repo, Repo)
-        self.assertIs(repo.connector, self.connector)
-        self.assertIs(repo.config, self.conf)
-        self.assertEqual(repo.index, PictureIndex())
+        self.assertIsInstance(r, Repo)
+        self.assertIs(r.connector, self.connector)
+        self.assertIs(r.config, self.conf)
+        self.assertEqual(r.index, PictureIndex())
 
         # test conf on disk
-        self.assertTrue(self.connector.opened(config.CONFIG_FILE))
+        self.assertTrue(self.connector.opened(repo.CONFIG_FILE))
         conf_on_disk = config.Config()
-        conf_on_disk.read(self.connector.get_file(config.CONFIG_FILE))
+        conf_on_disk.read(self.connector.get_file(repo.CONFIG_FILE))
         self.assertEqual(conf_on_disk, self.conf)
 
         # test picture index on disk
@@ -157,18 +157,18 @@ class FactoryTests(unittest.TestCase):
         self.assertEqual(index_on_disk, index.PictureIndex())
 
     def test_create_on_disk_with_index(self):
-        repo = Repo.create_on_disk(self.connector, self.conf, self.pi)
+        r = Repo.create_on_disk(self.connector, self.conf, self.pi)
 
         # test repo
-        self.assertIsInstance(repo, Repo)
-        self.assertIs(repo.connector, self.connector)
-        self.assertIs(repo.config, self.conf)
-        self.assertEqual(repo.index, self.pi)
+        self.assertIsInstance(r, Repo)
+        self.assertIs(r.connector, self.connector)
+        self.assertIs(r.config, self.conf)
+        self.assertEqual(r.index, self.pi)
 
         # test conf on disk
-        self.assertTrue(self.connector.opened(config.CONFIG_FILE))
+        self.assertTrue(self.connector.opened(repo.CONFIG_FILE))
         conf_on_disk = config.Config()
-        conf_on_disk.read(self.connector.get_file(config.CONFIG_FILE))
+        conf_on_disk.read(self.connector.get_file(repo.CONFIG_FILE))
         self.assertEqual(conf_on_disk, self.conf)
 
         # test picture index on disk
@@ -202,7 +202,7 @@ class FactoryTests(unittest.TestCase):
         with self.assertRaises(VersionMismatchError) as cm:
             Repo.load_from_disk(self.connector)
         self.assertEqual(cm.exception.actual, 99)
-        self.assertEqual(cm.exception.expected, config.INDEX_FORMAT_VERSION)
+        self.assertEqual(cm.exception.expected, repo.INDEX_FORMAT_VERSION)
 
     def test_clone(self):
         src_repo = Repo.create_on_disk(self.connector, self.conf, self.pi)
@@ -215,7 +215,7 @@ class FactoryTests(unittest.TestCase):
         self.assertEqual(dest_repo.index, src_repo.index)
         self.assertIsNot(dest_repo.index, src_repo.index)
         self.assertIsNot(dest_repo, src_repo)
-        self.assertTrue(dest_connector.opened(config.CONFIG_FILE))
+        self.assertTrue(dest_connector.opened(repo.CONFIG_FILE))
         self.assertTrue(dest_connector.opened('mock-index-path'))
 
 

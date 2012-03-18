@@ -8,7 +8,6 @@ import unittest
 import mock
 import urlparse
 
-import config
 import index
 import repo
 
@@ -22,7 +21,7 @@ def create_mock_repo(connector):
     pi.add(MockPicture.create_many(20))
 
     # test config
-    conf = config.new_repo_config()
+    conf = repo.new_repo_config()
     conf['index.file'] = ".pic/testindex"
     conf['test.test'] = "foo"
 
@@ -42,12 +41,12 @@ class InitRepoTests(unittest.TestCase):
         app.init_repo()
 
         # check that config & files were opened
-        self.assertTrue(self.connector.opened(config.CONFIG_FILE))
-        self.assertTrue(self.connector.opened(config.INDEX_FILE))
+        self.assertTrue(self.connector.opened(repo.CONFIG_FILE))
+        self.assertTrue(self.connector.opened(repo.INDEX_FILE))
         # load initializied repo from disk and check index & config
         r = repo.Repo.load_from_disk(self.connector)
         # repo config should be default config
-        self.assertEqual(r.config, config.new_repo_config())
+        self.assertEqual(r.config, repo.new_repo_config())
         # repo index should be empty
         self.assertEqual(r.index, index.PictureIndex())
 
@@ -69,7 +68,7 @@ class LoadRepoTests(unittest.TestCase):
         self.assertEqual(app.repo.config, self.repo.config)
         self.assertIsNot(app.repo, self.repo)
         # check that correct config & index files were opened
-        self.assertTrue(self.connector.opened(config.CONFIG_FILE))
+        self.assertTrue(self.connector.opened(repo.CONFIG_FILE))
         self.assertTrue(self.connector.opened(self.repo.config['index.file']))
 
 
@@ -177,7 +176,7 @@ class MigrateRepoTests(unittest.TestCase):
         # load repo from disk and check it's index version
         repo_new = repo.Repo.load_from_disk(self.connector)
         self.assertEqual(repo_new.config['index.format_version'],
-                         config.INDEX_FORMAT_VERSION)
+                         repo.INDEX_FORMAT_VERSION)
         self.assertIsNot(repo_new.config, repo_old.config)
 
 

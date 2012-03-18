@@ -7,7 +7,7 @@
 import os
 import logging
 
-import config
+import repo
 
 from connector import LocalConnector
 from recipe import Recipe
@@ -16,7 +16,9 @@ from picture import Picture, get_sha1
 from pipeline import Pipeline
 from viewer import Viewer
 
+
 log = logging.getLogger('pic.app')
+
 
 class App(object):
     """PictureClerk's command line interface."""
@@ -27,7 +29,7 @@ class App(object):
 
     def init_repo(self):
         """Initialize new repository."""
-        repo_config = config.new_repo_config()
+        repo_config = repo.new_repo_config()
         self.repo = Repo.create_on_disk(self.connector, repo_config)
         self.init_repo_logging(repo_config['logging.file'],
                                repo_config['logging.format'])
@@ -123,7 +125,7 @@ class App(object):
     def migrate_repo(self):
         """Migrate repository from an old format to the current one."""
         log.info("Migrating repository to new format.")
-        self.repo.config['index.format_version'] = config.INDEX_FORMAT_VERSION
+        self.repo.config['index.format_version'] = repo.INDEX_FORMAT_VERSION
         try:
             self.connector.connect()
             self.repo.save_index_to_disk()

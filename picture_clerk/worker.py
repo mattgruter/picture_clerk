@@ -1,16 +1,9 @@
-from __future__ import with_statement
-"""worker.py
-
-PictureClerk - The little helper for your picture workflow.
-This file contains the Worker class
 """
+@author: Matthias Grueter <matthias@grueter.name>
+@copyright: Copyright (c) 2012 Matthias Grueter
+@license: GPL
 
-__author__ = "Matthias Grueter (matthias@grueter.name)"
-__version__ = "$Revision: 0.1 $"
-__date__ = "$Date: 2008/11/18 $"
-__copyright__ = "Copyright (c) 2008 Matthias Grueter"
-__license__ = "GPL"
-
+"""
 import os
 import threading
 import Queue
@@ -21,6 +14,8 @@ import pyexiv2
 import logging
 
 import config
+import repo
+
 
 log = logging.getLogger('pic.worker')
 
@@ -127,8 +122,8 @@ class ThumbWorker(Worker):
 
         # create thumbnail subdir if it doesn't already exist
         #@fixme: this isn't thread-safe!
-        if not os.path.exists(config.THUMB_SIDECAR_DIR):
-            os.mkdir(config.THUMB_SIDECAR_DIR)
+        if not os.path.exists(repo.THUMB_SIDECAR_DIR):
+            os.mkdir(repo.THUMB_SIDECAR_DIR)
 
         metadata = pyexiv2.ImageMetadata(picture.filename)
         metadata.read()
@@ -136,7 +131,7 @@ class ThumbWorker(Worker):
         # interested in the one with the largest dimensions
         thumb = metadata.previews[-1]
         thumb_filename = picture.basename + '.thumb' + thumb.extension
-        thumb_path = os.path.join(config.THUMB_SIDECAR_DIR, thumb_filename)
+        thumb_path = os.path.join(repo.THUMB_SIDECAR_DIR, thumb_filename)
 
         # @todo: save MIME type
 #        thumb_mime_type = thumb.mime_type
@@ -173,7 +168,7 @@ class ThumbWorker(Worker):
         #        sidecar_path should be determined in _work method and somehow
         #        returned by it.
         _filename = picture.basename + '.thumb.jpg'
-        _path = os.path.join(config.THUMB_SIDECAR_DIR, _filename)
+        _path = os.path.join(repo.THUMB_SIDECAR_DIR, _filename)
         _content_type = 'Thumbnail'
         return (_path, _content_type)
 
@@ -239,11 +234,11 @@ class HashDigestWorker(Worker):
             buf = pic.read()
         digest = hashlib.sha1(buf).hexdigest()
         picture.checksum = digest
-        if config.SHA1_SIDECAR_ENABLED:
+        if repo.SHA1_SIDECAR_ENABLED:
             # create sha1 subdir if it doesn't already exist
             #@fixme: this isn't thread-safe!
-            if not os.path.exists(config.SHA1_SIDECAR_DIR):
-                os.mkdir(config.SHA1_SIDECAR_DIR)
+            if not os.path.exists(repo.SHA1_SIDECAR_DIR):
+                os.mkdir(repo.SHA1_SIDECAR_DIR)
 
             # write digest to a sidecar file     
             (hashfile_path, contentType) = self._compile_sidecar_path(picture)
@@ -260,7 +255,7 @@ class HashDigestWorker(Worker):
 
     def _compile_sidecar_path(self, picture):
         _filename = picture.basename + '.sha1'
-        _path = os.path.join(config.SHA1_SIDECAR_DIR, _filename)
+        _path = os.path.join(repo.SHA1_SIDECAR_DIR, _filename)
         _contentType = 'Checksum'
         return (_path, _contentType)
 
@@ -322,7 +317,7 @@ class Exiv2XMPSidecarWorker(SubprocessWorker):
 
     def _compile_sidecar_path(self, picture):
         _filename = picture.basename + '.xmp'
-        _path = os.path.join(config.XMP_SIDECAR_DIR, _filename)
+        _path = os.path.join(repo.XMP_SIDECAR_DIR, _filename)
         _content_type = 'XMP Metadata'
         return (_path, _content_type)
 

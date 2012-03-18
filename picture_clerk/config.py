@@ -5,7 +5,6 @@
 
 """
 import os.path
-import logging
 import ConfigParser
 import collections
 
@@ -30,41 +29,6 @@ EXIV2_BIN = '/usr/bin/exiv2'
 
 # path to jhead executable (used by AutorotWorker)
 JHEAD_BIN = '/usr/bin/jhead'
-
-
-## repo level defaults
-# PictureClerk repo directory
-PIC_DIR = ".pic"
-
-# config file
-CONFIG_FILE = os.path.join(PIC_DIR, "config")
-
-# default picture index file
-INDEX_FILE = os.path.join(PIC_DIR, "index")
-
-# index format version
-INDEX_FORMAT_VERSION = 1
-
-# repo logging
-REPO_LOG_FILE = os.path.join(PIC_DIR, "log.txt")
-REPO_LOG_LEVEL = logging.DEBUG
-REPO_LOG_FORMAT = '%%(asctime)s %%(name)-15s %%(levelname)-8s %%(message)s'
-
-# SHA1 sidecar files on/off
-SHA1_SIDECAR_ENABLED = 1
-SHA1_SIDECAR_DIR = os.path.join(PIC_DIR, "sha1")
-
-# thumbnail configuration
-THUMB_SIDECAR_DIR = "jpg"
-
-# XMP metadata sidecar file destination
-XMP_SIDECAR_DIR = os.path.join(PIC_DIR, "xmp")
-
-# default processing instructions/recipe used if none defined at command line
-DEFAULT_RECIPE = "HashDigestWorker, ThumbWorker, AutorotWorker, MetadataWorker"
-
-# viewer
-VIEWER_CMD = "qiv -m -t"
 
 
 class Config(collections.MutableMapping):
@@ -195,21 +159,3 @@ def new_app_config():
                 }
 
     return Config(APP_CONFIG)
-
-def new_repo_config():
-    """Return default repo configuration (Config instance)."""
-
-    REPO_CONFIG = {
-        'index.file': INDEX_FILE,
-        'index.format_version': INDEX_FORMAT_VERSION,
-        'recipes.default': DEFAULT_RECIPE,
-        'thumbnails.sidecar_dir': THUMB_SIDECAR_DIR,
-        'checksums.sidecar_enabled': SHA1_SIDECAR_ENABLED,
-        'checksums.sidecar_dir': SHA1_SIDECAR_DIR,
-        'logging.file': REPO_LOG_FILE,
-        'logging.level': REPO_LOG_LEVEL,
-        'logging.format': REPO_LOG_FORMAT,
-        'viewer.prog': VIEWER_CMD,
-               }
-
-    return Config(REPO_CONFIG)
