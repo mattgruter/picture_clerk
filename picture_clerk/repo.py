@@ -141,17 +141,15 @@ class Repo(object):
         """
         if not pi:
             pi = index.PictureIndex()
-        try:
-            connector.connect()
-            if not connector.exists('.'):
-                connector.mkdir('.')
-            connector.mkdir(PIC_DIR)
-            with connector.open(CONFIG_FILE, 'w') as config_fh:
-                conf.write(config_fh)
-            repo = Repo(pi, conf, connector)
-            repo.save_index_to_disk()
-        finally:
-            connector.disconnect()
+
+        if not connector.exists('.'):
+            connector.mkdir('.')
+        connector.mkdir(PIC_DIR)
+        with connector.open(CONFIG_FILE, 'w') as config_fh:
+            conf.write(config_fh)
+        repo = Repo(pi, conf, connector)
+        repo.save_index_to_disk()
+
         return repo
 
     @classmethod
@@ -162,18 +160,13 @@ class Repo(object):
         
         """
         repo = Repo(config={}, index={}, connector=connector)
-        try:
-            connector.connect()
 
-            # check if dir exists
-            if not (connector.exists('.') and connector.exists(PIC_DIR)):
-                raise NotFoundError(connector.url)
+        # check if dir exists
+        if not (connector.exists('.') and connector.exists(PIC_DIR)):
+            raise NotFoundError(connector.url)
 
-            repo.load_config_from_disk()
-            repo.load_index_from_disk(repo.config['index.format_version'])
-
-        finally:
-            connector.disconnect()
+        repo.load_config_from_disk()
+        repo.load_index_from_disk(repo.config['index.format_version'])
 
         return repo
 
@@ -186,10 +179,6 @@ class Repo(object):
         
         """
         
-        #@fixme: src & dest connectors are connected/disconnected many times:
-        #        src: 1x load_from_disk, 1x src.connect
-        #        dest: 1x create_on_disk, 1x dest.connect
-        
         # clone repo
         src_repo = Repo.load_from_disk(src)
         repo = Repo.create_on_disk(connector=dest,
@@ -197,14 +186,8 @@ class Repo(object):
                                    pi=copy.deepcopy(src_repo.index))
 
         # clone pictures
-        try:
-            src.connect()
-            dest.connect()
-            for picture in src_repo.index.iterpics():
-                for fname in picture.get_filenames():
-                    src.copy(fname, dest, dest_path=fname)
-        finally:
-            src.disconnect()
-            dest.disconnect()
+        for picture in src_repo.index.iterpics():
+            for fname in picture.get_filenames():
+                src.copy(fname, dest, dest_path=fname)
 
         return repo

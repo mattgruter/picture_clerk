@@ -32,9 +32,10 @@ class InitRepoTests(unittest.TestCase):
 
     def setUp(self):
         self.connector = MockConnector(urlparse.urlparse('/basedir/repo/'))
+        self.connector.connect()
 
     def tearDown(self):
-        pass
+        self.connector.disconnect()
 
     def test_init_repo(self):
         app = App(self.connector)
@@ -55,10 +56,11 @@ class LoadRepoTests(unittest.TestCase):
 
     def setUp(self):
         self.connector = MockConnector(urlparse.urlparse('/basedir/repo/'))
+        self.connector.connect()
         self.repo = create_mock_repo(self.connector)
 
     def tearDown(self):
-        pass
+        self.connector.disconnect()
 
     def test_load_repo(self):
         app = App(self.connector)
@@ -76,10 +78,11 @@ class AddRemovePicsTests(unittest.TestCase):
 
     def setUp(self):
         self.connector = MockConnector(urlparse.urlparse('/basedir/repo/'))
+        self.connector.connect()
         self.repo = create_mock_repo(self.connector)
 
     def tearDown(self):
-        pass
+        self.connector.disconnect()
 
     @mock.patch('os.path.exists')
     def test_add_pics(self, mock_exists):
@@ -122,10 +125,11 @@ class ListPicsTests(unittest.TestCase):
 
     def setUp(self):
         self.connector = MockConnector(urlparse.urlparse('/basedir/repo/'))
+        self.connector.connect()
         self.repo = create_mock_repo(self.connector)
 
     def tearDown(self):
-        pass
+        self.connector.disconnect()
 
     def test_list_all(self):
         app = App(self.connector, self.repo)
@@ -158,18 +162,15 @@ class MigrateRepoTests(unittest.TestCase):
 
     def setUp(self):
         self.connector = MockConnector(urlparse.urlparse('/basedir/repo/'))
+        self.connector.connect()
 
     def tearDown(self):
-        pass
+        self.connector.disconnect()
 
     def test_migrate_repo(self):
         repo_old = create_mock_repo(self.connector)
         repo_old.config['index.format_version'] = 0
-        try:
-            self.connector.connect()
-            repo_old.save_config_to_disk()
-        finally:
-            self.connector.disconnect()
+        repo_old.save_config_to_disk()
         app = App(self.connector, repo_old)
         app.migrate_repo()
 
@@ -186,10 +187,11 @@ class ViewPicsTests(unittest.TestCase):
 
     def setUp(self):
         self.connector = MockConnector(urlparse.urlparse('/basedir/repo/'))
+        self.connector.connect()
         self.repo = create_mock_repo(self.connector)
 
     def tearDown(self):
-        pass
+        self.connector.disconnect()
 
     def test_default_prog(self, MockViewer, mock_remove_pics):
         mock_viewer_inst = MockViewer.return_value
@@ -229,17 +231,16 @@ class CheckPicsTests(unittest.TestCase):
 
     def setUp(self):
         self.connector = MockConnector(urlparse.urlparse('/basedir/repo/'))
+        self.connector.connect()
         self.repo = create_mock_repo(self.connector)
 
         # prepare picture buffers to only consist of picture filename
-        self.connector.connect()
         for pic in self.repo.index.iterpics():
             with self.connector.open(pic.filename, 'w') as buf:
                 buf.write(pic.filename)
-        self.connector.disconnect()
 
     def tearDown(self):
-        pass
+        self.connector.disconnect()
 
     def test_empty_repo(self):
         r = repo.Repo(index.PictureIndex(), {}, self.connector)
@@ -259,11 +260,9 @@ class CheckPicsTests(unittest.TestCase):
 
     def test_all_corrupt(self):
         # corrupt all picture buffers
-        self.connector.connect()
         for pic in self.repo.index.iterpics():
             with self.connector.open(pic.filename, 'w') as buf:
                 buf.write('garbage')
-        self.connector.disconnect()
 
         app = App(self.connector, self.repo)
         corrupt, missing = app.check_pics()

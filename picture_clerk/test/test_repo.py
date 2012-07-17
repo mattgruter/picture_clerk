@@ -39,12 +39,12 @@ class LoadTests(unittest.TestCase):
 
     def setUp(self):
         self.connector = MockConnector(urlparse.urlparse('/baseurl/repo/'))
+        self.connector.connect()
         self.pi = index.PictureIndex()
         self.pi.add(MockPicture.create_many(10))
         self.conf = repo.new_repo_config()
         self.conf['index.file'] = 'mock-index-path'
         Repo.create_on_disk(self.connector, self.conf, self.pi)
-        self.connector.connect()
 
     def tearDown(self):
         self.connector.disconnect()
@@ -96,11 +96,11 @@ class SaveTests(unittest.TestCase):
 
     def setUp(self):
         self.connector = MockConnector(urlparse.urlparse('/baseurl/repo/'))
+        self.connector.connect()
         self.pi = index.PictureIndex()
         self.pi.add(MockPicture.create_many(10))
         self.conf = repo.new_repo_config()
         self.conf['index.file'] = 'mock-index-path'
-        self.connector.connect()
 
     def tearDown(self):
         self.connector.disconnect()
@@ -130,6 +130,7 @@ class FactoryTests(unittest.TestCase):
 
     def setUp(self):
         self.connector = MockConnector(urlparse.urlparse('/baseurl/repo/'))
+        self.connector.connect()
         self.pi = index.PictureIndex()
         self.pi.add(MockPicture.create_many(10))
         self.conf = repo.new_repo_config()
@@ -207,6 +208,7 @@ class FactoryTests(unittest.TestCase):
     def test_clone(self):
         src_repo = Repo.create_on_disk(self.connector, self.conf, self.pi)
         dest_connector = MockConnector(urlparse.urlparse('/destrepo/baseurl/'))
+        dest_connector.connect()
         dest_repo = Repo.clone(src=self.connector, dest=dest_connector)
 
         self.assertIsInstance(dest_repo, Repo)

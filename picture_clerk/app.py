@@ -30,7 +30,7 @@ class App(object):
     def init_repo(self):
         """Initialize new repository."""
         repo_config = repo.new_repo_config()
-        self.repo = Repo.create_on_disk(self.connector, repo_config)
+        self.repo = Repo.create_on_disk(self.connector, repo_config)      
         self.init_repo_logging(repo_config['logging.file'],
                                repo_config['logging.format'])
         log.info("Initialized empty PictureClerk repository")
@@ -70,11 +70,7 @@ class App(object):
             pl.join()
 
         log.info("Saving index to file.")
-        try:
-            self.connector.connect()
-            self.repo.save_index_to_disk()
-        finally:
-            self.connector.disconnect()
+        self.repo.save_index_to_disk()
 
     def remove_pics(self, files):
         """Remove pictures associated with supplied files from repo & disk."""
@@ -85,7 +81,6 @@ class App(object):
         picfiles = (picfile for pic in pics
                             for picfile in pic.get_filenames())
 
-        self.connector.connect()
         for picfile in picfiles:
             try:
                 self.connector.remove(picfile)
@@ -97,7 +92,6 @@ class App(object):
 
         log.info("Saving index to file.")
         self.repo.save_index_to_disk()
-        self.connector.disconnect()
 
     def list_pics(self, mode):
         """Return information on pictures in repository."""
@@ -126,30 +120,24 @@ class App(object):
         """Migrate repository from an old format to the current one."""
         log.info("Migrating repository to new format.")
         self.repo.config['index.format_version'] = repo.INDEX_FORMAT_VERSION
-        try:
-            self.connector.connect()
-            self.repo.save_index_to_disk()
-            self.repo.save_config_to_disk()
-        finally:
-            self.connector.disconnect()
+        self.repo.save_index_to_disk()
+        self.repo.save_config_to_disk()
 
     def check_pics(self):
         """Verify picture checksums. Return names of corrupt & missing pics."""
         corrupted = []
         missing = []
-        try:
-            self.connector.connect()
-            for pic in self.repo.index.pics():
-                try:
-                    with self.connector.open(pic.filename, 'r') as buf:
-                        checksum = get_sha1(buf.read())
-                except (IOError, OSError):
-                    missing.append(pic.filename)
-                else:
-                    if checksum != pic.checksum:
-                        corrupted.append(pic.filename)
-        finally:
-            self.connector.disconnect()
+
+        for pic in self.repo.index.pics():
+            try:
+                with self.connector.open(pic.filename, 'r') as buf:
+                    checksum = get_sha1(buf.read())
+            except (IOError, OSError):
+                missing.append(pic.filename)
+            else:
+                if checksum != pic.checksum:
+                    corrupted.append(pic.filename)
+                    
         return corrupted, missing
 
     def init_repo_logging(self, log_file, log_format):

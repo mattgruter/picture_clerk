@@ -207,8 +207,13 @@ class CLI(object):
         args = self.parse_args(argv[1:])
         self.setup_signal_handlers()
         self.setup_logging(args.verbosity)
-        self.app = App(Connector.from_string('.'))
-        exit_code = self.dispatch_args(self.app, args)
+        connector = Connector.from_string('.')
+        try:
+            connector.connect()
+            self.app = App(connector)
+            exit_code = self.dispatch_args(self.app, args)
+        finally:
+            connector.disconnect()
         self.shutdown(exit_code)
 
     def shutdown(self, exit_code):
