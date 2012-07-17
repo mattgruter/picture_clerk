@@ -9,7 +9,7 @@ import logging
 
 import repo
 
-from connector import LocalConnector
+from connector import Connector, LocalConnector
 from recipe import Recipe
 from repo import Repo
 from picture import Picture, get_sha1
@@ -139,6 +139,18 @@ class App(object):
                     corrupted.append(pic.filename)
                     
         return corrupted, missing
+        
+    def merge_repos(self, others):
+        """Merge repositories into current one."""
+        for url in others:
+            log.info("Merging repository '%s'", url)
+            connector = Connector.from_string(url)
+            repo = Repo.load_from_disk(connector)
+            self.repo.index.add(repo.index.iterpics())
+            #@todo: copy picture files to merged repo
+            #@todo: verify picture file integrity after merge
+        log.info("Saving index to file.")
+        self.repo.save_index_to_disk()
 
     def init_repo_logging(self, log_file, log_format):
         # repo file logging (only if repo is local)

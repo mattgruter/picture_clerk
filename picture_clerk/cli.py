@@ -110,6 +110,12 @@ class CLI(object):
             print '\n'.join('MISSING: %s' % pic for pic in missing_pics)
             exit_code = 1
         return exit_code
+    
+    def handle_merge_cmd(self, app, args):
+        app.load_repo()
+        app.merge_repos(args.repos)
+        return 0
+        
 
     def parse_args(self, args):
         """Parse command line arguments and return result.
@@ -200,6 +206,23 @@ class CLI(object):
             'check',
             help="find corrupt or missing picture files")
         parser_check.set_defaults(func=self.handle_check_cmd)
+        
+        # 'merge' subcommand
+        parser_merge = subparsers.add_parser(
+            'merge',
+            help="join two or more repositories together")
+        parser_merge.add_argument(
+            '--nocheck',
+            dest='check',
+            default=True,
+            action='store_false',
+            help="don't check integrity of picture files after merge")
+        parser_merge.add_argument(
+            'repos',
+            metavar='repo',
+            nargs='+',
+            help="repositories to merge into current one")
+        parser_merge.set_defaults(func=self.handle_merge_cmd)
 
         return parser.parse_args(args)
 
