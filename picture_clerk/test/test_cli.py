@@ -11,19 +11,16 @@ from cli import CLI
 
 
 @mock.patch('sys.exit')
-@mock.patch('cli.App')
 class BasicTests(unittest.TestCase):
 
+    @mock.patch('cli.App')
     def test_main(self, MockApp, mock_exit):
-        app = MockApp()
         cli = CLI()
         cli.main(['progname', 'init'])
-        self.assertEqual(cli.app, app)
         mock_exit.assert_called_once_with(0)        # error-free exit
 
-    def test_shutdown(self, MockApp, mock_exit):
+    def test_shutdown(self, mock_exit):
         cli = CLI()
-        cli.app = MockApp()
         cli.shutdown(17)
         mock_exit.assert_called_once_with(17)
 

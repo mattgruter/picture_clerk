@@ -210,14 +210,14 @@ class CLI(object):
         connector = Connector.from_string('.')
         try:
             connector.connect()
-            self.app = App(connector)
-            exit_code = self.dispatch_args(self.app, args)
+            app = App(connector)
+            exit_code = self.dispatch_args(app, args)
         finally:
             connector.disconnect()
+        app.shutdown()
         self.shutdown(exit_code)
 
     def shutdown(self, exit_code):
-        self.app.shutdown()
         logging.shutdown()
         sys.exit(exit_code)
 
