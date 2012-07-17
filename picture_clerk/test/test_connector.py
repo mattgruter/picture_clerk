@@ -21,20 +21,19 @@ class TestConnector(Connector):
     _mkdir = None
     _remove = None
 
-    @classmethod
-    def setup(cls):
-        cls._connect = mock.Mock()
-        cls._disconnect = mock.Mock()
-        cls._exists = mock.Mock()
-        cls._mkdir = mock.Mock()
-        cls._remove = mock.Mock()
+    def setup(self):
+        self._connect = mock.Mock()
+        self._disconnect = mock.Mock()
+        self._exists = mock.Mock()
+        self._mkdir = mock.Mock()
+        self._remove = mock.Mock()
 
         # make sure that _open returns a (mocked) context manager
         mock_cm = mock.Mock()
         mock_cm.__enter__ = mock.Mock()
         mock_cm.__exit__ = mock.Mock()
         mock_cm.__exit__.return_value = False
-        cls._open = mock.Mock(return_value=mock_cm)
+        self._open = mock.Mock(return_value=mock_cm)
 
     def __init__(self, url):
         Connector.__init__(self, url)
@@ -153,19 +152,24 @@ class ConnectorCopyTest(unittest.TestCase):
         dest_url = urlparse("testurl2")
         self.dest_tc = TestConnector(dest_url)
 
-    def testCopyFail(self):
+    def testCopyFailSrcDisconnected(self):
         """copy() should raise NotConnectedError if src is not connected."""
         self.assertRaises(NotConnectedError, self.src_tc.copy,
                           'src_path', self.dest_tc, 'dest_path')
-
-    def testDestConnect(self):
-        """copy() should connect destination connector."""
+        
+    def testCopyFailDestDisconnected(self):
+        """copy() should raise NotConnectedError if dest is not connected."""
         self.src_tc.connect()
-        self.dest_tc.disconnect()
+        self.assertRaises(NotConnectedError, self.src_tc.copy,
+                          'src_path', self.dest_tc, 'dest_path')
+        
+    def testCopy(self):
+        """copy() should open src path for reading and dest path for writing."""
+        self.src_tc.connect()
+        self.dest_tc.connect()
         self.src_tc.copy('src_path', self.dest_tc, 'dest_path')
-        self.assertTrue(self.dest_tc._connect.called)
-        self.assertTrue(self.dest_tc._disconnect.called)
-
+        self.src_tc._open.assert_called_once_with('src_path', 'r')
+        self.dest_tc._open.assert_called_once_with('dest_path', 'w')
 
 
 if __name__ == "__main__":

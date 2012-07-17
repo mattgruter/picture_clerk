@@ -185,11 +185,9 @@ class Connector(object):
         if self.isconnected:
             log.debug("Copying '%s'" % \
                           urlparse.urljoin(dest_conn.url.geturl(), dest_path))
-            dest_conn.connect()
             with self.open(src_path, 'r') as src_fh:
                 with dest_conn.open(dest_path, 'w') as dest_fh:
                     dest_fh.writelines(src_fh.readlines())
-            dest_conn.disconnect()
         else:
             raise NotConnectedError()
 

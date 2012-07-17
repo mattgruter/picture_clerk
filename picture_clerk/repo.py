@@ -185,6 +185,11 @@ class Repo(object):
         dest -- connector pointing to location of new clone-index
         
         """
+        
+        #@fixme: src & dest connectors are connected/disconnected many times:
+        #        src: 1x load_from_disk, 1x src.connect
+        #        dest: 1x create_on_disk, 1x dest.connect
+        
         # clone repo
         src_repo = Repo.load_from_disk(src)
         repo = Repo.create_on_disk(connector=dest,
@@ -192,11 +197,9 @@ class Repo(object):
                                    pi=copy.deepcopy(src_repo.index))
 
         # clone pictures
-        # @FIXME: dest will be connected/disconnected many times during cloning
-        #         once above and once for each file to copy!
         try:
             src.connect()
-            dest.disconnect()
+            dest.connect()
             for picture in src_repo.index.iterpics():
                 for fname in picture.get_filenames():
                     src.copy(fname, dest, dest_path=fname)
