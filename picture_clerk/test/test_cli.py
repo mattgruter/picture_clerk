@@ -212,6 +212,23 @@ class SubcommandCheckTests(unittest.TestCase):
         app.check_pics.assert_called_once_with()
         app.shutdown.assert_called_once_with()
         mock_exit.assert_called_once_with(1)
+        
+@mock.patch('sys.exit')
+@mock.patch('cli.App')
+class SubcommandMergeTests(unittest.TestCase):
+
+    def setUp(self):
+        self.repos = ['repoA', 'repoB', 'repoC']
+
+    def test_merge(self, MockApp, mock_exit):
+        app = MockApp()
+        cli = CLI()
+        cli.main(['progname', 'merge'] + self.repos)
+
+        app.load_repo.assert_called_once_with()
+        app.merge_repos.assert_called_once_with(self.repos)
+        app.shutdown.assert_called_once_with()
+        mock_exit.assert_called_once_with(0)
 
 
 if __name__ == "__main__":
