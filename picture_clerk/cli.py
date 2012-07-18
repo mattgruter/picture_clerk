@@ -212,12 +212,6 @@ class CLI(object):
             'merge',
             help="join two or more repositories together")
         parser_merge.add_argument(
-            '--nocheck',
-            dest='check',
-            default=True,
-            action='store_false',
-            help="don't check integrity of picture files after merge")
-        parser_merge.add_argument(
             'repos',
             metavar='repo',
             nargs='+',

@@ -145,10 +145,20 @@ class App(object):
         for url in others:
             log.info("Merging repository '%s'", url)
             connector = Connector.from_string(url)
-            repo = Repo.load_from_disk(connector)
+            try:
+                connector.connect()
+                repo = Repo.load_from_disk(connector)
+                
+                # copy picture files
+                for picture in repo.index.iterpics():
+                    for fname in picture.get_filenames():
+                        connector.copy(fname, self.connector, dest_path=fname)
+            finally:
+                connector.disconnect()
+                    
+            # add pictures to index
             self.repo.index.add(repo.index.iterpics())
-            #@todo: copy picture files to merged repo
-            #@todo: verify picture file integrity after merge
+                    
         log.info("Saving index to file.")
         self.repo.save_index_to_disk()
 
