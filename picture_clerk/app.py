@@ -118,10 +118,12 @@ class App(object):
 
     def migrate_repo(self):
         """Migrate repository from an old format to the current one."""
-        log.info("Migrating repository to new format.")
-        self.repo.config['index.format_version'] = repo.INDEX_FORMAT_VERSION
-        self.repo.save_index_to_disk()
-        self.repo.save_config_to_disk()
+        # only migrate if repo is old
+        if self.repo.config['index.format_version'] < repo.INDEX_FORMAT_VERSION:
+            log.info("Migrating repository to new format.")
+            self.repo.config['index.format_version'] = repo.INDEX_FORMAT_VERSION
+            self.repo.save_index_to_disk()
+            self.repo.save_config_to_disk()
 
     def check_pics(self):
         """Verify picture checksums. Return names of corrupt & missing pics."""
