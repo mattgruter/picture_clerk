@@ -285,8 +285,15 @@ class SubprocessWorker(Worker):
         for command in commands:
             try:
                 self.process = subprocess.Popen(command,
-                                                shell=False,
-                                                cwd=self.path)
+                                                shell=False, cwd=self.path,
+                                                stdout=subprocess.PIPE,
+                                                stderr=subprocess.STDOUT)
+
+                while True:
+                    line = self.process.stdout.readline()
+                    if not line:
+                        break
+                    self.logger.info(line.strip())
 
                 retcode = self.process.wait()
                 if retcode < 0:
