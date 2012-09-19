@@ -49,6 +49,9 @@ class Connector(object):
 
     def __repr__(self):
         return "%s(%s)" % (self.__class__.__name__, repr(self.url))
+    
+    def __eq__(self, other):
+        return self.url == other.url
 
     def _rel2abs(self, rel_path):
         if rel_path == '.':
