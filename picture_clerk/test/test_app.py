@@ -282,6 +282,40 @@ class CheckPicsTests(unittest.TestCase):
         self.assertSequenceEqual(corrupt, [])
         self.assertSequenceEqual(missing, [pic.filename
                                            for pic in self.repo.index.pics()])
+        
+        
+class CloneRepoTests(unittest.TestCase):
+
+    def setUp(self):
+        # create original repo and disconnect from it before test
+        self.orig_connector = MockConnector(urlparse.urlparse('/orig/path/'))
+        self.orig_connector.connect()
+        self.orig = create_mock_repo(self.orig_connector)
+
+        # connector to clone
+        self.connector = MockConnector(urlparse.urlparse('/clone/path/'))
+        self.connector.connect()
+
+    def tearDown(self):
+        self.orig_connector.disconnect()
+        self.connector.disconnect()
+
+    def test_clone_repo(self):
+        app = App(self.connector)
+        app.clone_repo(self.orig_connector)
+        
+        self.assertEqual(app.repo.config, self.orig.config)
+        self.assertEqual(app.repo.index, self.orig.index)
+        
+    def test_clone_exists_on_disk(self):
+        app = App(self.connector)
+        app.clone_repo(self.orig_connector)
+        
+        # load clone from disk
+        clone = repo.Repo.load_from_disk(self.connector)
+        
+        self.assertEqual(clone.config, self.orig.config)
+        self.assertEqual(clone.index, self.orig.index)
 
 
 if __name__ == "__main__":

@@ -115,6 +115,15 @@ class CLI(object):
         app.load_repo()
         app.merge_repos(args.repos)
         return 0
+    
+    def handle_clone_cmd(self, app, args):
+        origin = Connector.from_string(args.repo)
+        try:
+            origin.connect()
+            app.clone_repo(origin)
+        finally:
+            origin.disconnect()
+        return 0
         
 
     def parse_args(self, args):
@@ -217,6 +226,16 @@ class CLI(object):
             nargs='+',
             help="repositories to merge into current one")
         parser_merge.set_defaults(func=self.handle_merge_cmd)
+        
+        # 'clone' subcommand
+        parser_clone = subparsers.add_parser(
+            'clone',
+            help="clone repository")
+        parser_clone.add_argument(
+            'repo',
+            metavar='repo',
+            help="repository to clone (origin)")
+        parser_clone.set_defaults(func=self.handle_clone_cmd)
 
         return parser.parse_args(args)
 

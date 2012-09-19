@@ -163,6 +163,14 @@ class App(object):
                     
         log.info("Saving index to file.")
         self.repo.save_index_to_disk()
+        
+    def clone_repo(self, origin):
+        """Clone a repository."""
+        self.repo = Repo.clone(origin, self.connector)
+        self.init_repo_logging(self.repo.config['logging.file'],
+                               self.repo.config['logging.format'])
+        log.info("Cloned repository from %s to %s" % (origin.url.path,
+                                                      self.connector.url.path))
 
     def init_repo_logging(self, log_file, log_format):
         # repo file logging (only if repo is local)

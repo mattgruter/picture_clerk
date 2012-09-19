@@ -229,6 +229,21 @@ class SubcommandMergeTests(unittest.TestCase):
         app.merge_repos.assert_called_once_with(self.repos)
         app.shutdown.assert_called_once_with()
         mock_exit.assert_called_once_with(0)
+        
+@mock.patch('sys.exit')
+@mock.patch('cli.App')
+@mock.patch('cli.Connector')
+class SubcommandCloneTests(unittest.TestCase):
+
+    def test_merge(self, MockConnector, MockApp, mock_exit):
+        orig_url = "/origin/url"
+        CLI().main(['progname', 'clone', orig_url])
+
+        app = MockApp()
+        orig_connector = MockConnector.from_string(orig_url)
+        app.clone_repo.assert_called_once_with(orig_connector)
+        app.shutdown.assert_called_once_with()
+        mock_exit.assert_called_once_with(0)
 
 
 if __name__ == "__main__":
