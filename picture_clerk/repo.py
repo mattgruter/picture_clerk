@@ -188,6 +188,6 @@ class Repo(object):
         # clone pictures
         for picture in src_repo.index.iterpics():
             for fname in picture.get_filenames():
-                src.copy(fname, dest, dest_path=fname)
+                src.copy(fname, dest, dest_path=fname, create_parents=True)
 
         return repo

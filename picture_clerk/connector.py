@@ -98,6 +98,7 @@ class Connector(object):
         
         Arguments:
         rel_path -- path of file to open relative to connector's base URL
+        mode     -- 'r' for reading, 'w' for writing or 'a' for appending
         
         Raises:
         NotConnectedError
@@ -114,17 +115,22 @@ class Connector(object):
     def _mkdir(self, path, mode):
         raise NotImplementedError
 
-    def mkdir(self, rel_path, mode=0777):
+    def mkdir(self, rel_path, mode=0777, recursive=False):
         """Create a directory at the supplied relative path.
         
         Arguments:
-        rel_path -- path of directory to create relative to connector's base URL
+        rel_path  -- path of directory to create relative to base URL
+        mode      -- numeric mode (default: 0777) see os.mkdir's mode for infos
+        recursive -- create parent dirs if they don't exist (default: False)
         
         Raises:
         NotConnectedError
         
         """
         if self.isconnected:
+            rel_dirname = os.path.dirname(rel_path)
+            if recursive and not self.exists(rel_dirname):
+                self.mkdir(rel_dirname)
             path = self._rel2abs(rel_path)
             log.debug("Creating directory '%s'" % path)
             self._mkdir(path, mode)
@@ -173,13 +179,14 @@ class Connector(object):
         else:
             raise NotConnectedError()
 
-    def copy(self, src_path, dest_conn, dest_path):
+    def copy(self, src_path, dest_conn, dest_path, create_parents=False):
         """Copy file from src_path to dest_path based on dest_conn's URL.
 
         Arguments:
-        src_path  -- path of file to copy relative to this connector's base URL
-        dest_conn -- connector to destination path
-        dest_src  -- destination path relative to dest_conn's base URL 
+        src_path       -- path of file to copy relative to this conn's base URL
+        dest_conn      -- connector to destination path
+        dest_src       -- destination path relative to dest_conn's base URL 
+        create_parents -- recursively create parent directories at destination
 
         Raises:
         NotConnectedError
@@ -189,6 +196,9 @@ class Connector(object):
             log.debug("Copying '%s'" % \
                           urlparse.urljoin(dest_conn.url.geturl(), dest_path))
             with self.open(src_path, 'r') as src_fh:
+                dest_dirname = os.path.dirname(dest_path)
+                if create_parents and not dest_conn.exists(dest_dirname):
+                    dest_conn.mkdir(dest_dirname, recursive=True)
                 with dest_conn.open(dest_path, 'w') as dest_fh:
                     dest_fh.writelines(src_fh.readlines())
         else:
