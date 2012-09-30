@@ -31,3 +31,8 @@ or checkout packaging in python3 (see ReadItLater list).
 * make Picture, PictureIndex, Config, Repo immutable objects if possible to
   simplify concurrent processing or use defensive copying if object have to 
   be mutable.
+
+* add "backup" command that clones the repository to (multiple) pre-defined locations. The backup 
+  locations could be defined in a global configuration file (e.g. at ~/.pic/config). This is basically
+  the same as a clone command. The only difference would be that the current repo acts as the origin 
+  and a remote url as the destination (clone)
