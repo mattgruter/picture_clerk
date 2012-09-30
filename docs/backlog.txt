@@ -1,38 +1,53 @@
-* Implement a change-log for every action performed on a Picture or Repo
+Features
+========
+
+* Backup repo
+  Add "backup" command that clones the repository to (multiple) pre-defined locations. The backup 
+  locations could be defined in a global configuration file (e.g. at ~/.pic/config). This is basically
+  the same as a clone command. The only difference would be that the current repo acts as the origin 
+  and a remote url as the destination (clone)
+
+* Split repo
+  Possibility to split existing repository into multiple new repositories
+
+* Portable index format
+  Use human-readable & portable format for index on disk instead of pickle (e.g. json)
+
+* Error messages
+  Print sane error messages to CLI if repo is not initialized/unreadable, thumbnails don't exist, etc.
+
+* Logging
+  Don't log everything to repo log. Log only stuff relevant to repo: pics added/removed/edited, etc
+
+* Changelog
+  Implement a changelog for every action performed on a Picture or Repo
   instance. This could be achieved by providing a method decorator that does
   the necessary logging to a history log. Every log entry should consist of the
   method call with arguments (Python executable), a description of the action
   and the method call (with arguments) needed to undo the action.
-  
+
   T.ex. in Repo
-  
+
   @track_history(action='add(...)', descr=('added picture to index'),
   				 undo_action='del(...)')
   def add(self, picture):
-  	<...> 
+  	<...>
 
-* Possibility to split & merge repositories
+* Track deleted pictures
+  Keep track of deleted pictures, so that clones can be updated
 
-* Keep track of deleted pictures, so that clones can be updated
+* Logging
+  Don't log everything to repo log. Log only stuff relevant to repo: pics added/removed/edited, etc
 
-* Use human-readable & portable format for index on disk instead of pickle (e.g. json)
+Tech
+====
 
-* use virtualenv to work in a isolated python environment (http://iamzed.com/2009/05/07/a-primer-on-virtualenv/, http://www.mahdiyusuf.com/post/5282169518/beginners-guide-easy-install-pip-and-virtualenv)
-
-* package picture_clerk with pip (http://www.pip-installer.org/en/latest/)
-or checkout packaging in python3 (see ReadItLater list).
-
-* use dependency injection (e.g. snake-guice): http://www.connorgarvey.com/blog/?p=184
-
-* don't log everything to repo log. log only stuff relevant to repo: pics added/removed/edited, etc
-
-* print sane error messages to CLI if repo is not initialized/unreadable, thumbnails don't exist, etc.
-
-* make Picture, PictureIndex, Config, Repo immutable objects if possible to
+* Immutable objects
+  Make Picture, PictureIndex, Config, Repo immutable objects if possible to
   simplify concurrent processing or use defensive copying if object have to 
   be mutable.
 
-* add "backup" command that clones the repository to (multiple) pre-defined locations. The backup 
-  locations could be defined in a global configuration file (e.g. at ~/.pic/config). This is basically
-  the same as a clone command. The only difference would be that the current repo acts as the origin 
-  and a remote url as the destination (clone)
+* Dependency Injection
+  Use dependency injection (e.g. snake-guice): http://www.connorgarvey.com/blog/?p=184
+
+
