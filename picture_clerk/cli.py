@@ -75,33 +75,33 @@ class CLI(object):
         return 0
 
     def handle_add_cmd(self, app, args):
-        app.load_repo()
-        app.add_pics(args.files, args.process, args.recipe)
+        repo = app.load_repo()
+        app.add_pics(repo, args.files, args.process, args.recipe)
         return 0
 
     def handle_remove_cmd(self, app, args):
-        app.load_repo()
-        app.remove_pics(args.files)
+        repo = app.load_repo()
+        app.remove_pics(repo, args.files)
         return 0
 
     def handle_list_cmd(self, app, args):
-        app.load_repo()
-        print app.list_pics(args.mode)
+        repo = app.load_repo()
+        print app.list_pics(repo, args.mode)
         return 0
 
     def handle_view_cmd(self, app, args):
-        app.load_repo()
-        app.view_pics(args.viewer)
+        repo = app.load_repo()
+        app.view_pics(repo, args.viewer)
         return 0
 
     def handle_migrate_cmd(self, app, args):
-        app.load_repo()
-        app.migrate_repo()
+        repo = app.load_repo()
+        app.migrate_repo(repo)
         return 0
 
     def handle_check_cmd(self, app, args):
-        app.load_repo()
-        corrupt_pics, missing_pics = app.check_pics()
+        repo = app.load_repo()
+        corrupt_pics, missing_pics = app.check_pics(repo)
         exit_code = 0
         if corrupt_pics:
             print '\n'.join('CORRUPT: %s' % pic for pic in corrupt_pics)
@@ -112,15 +112,15 @@ class CLI(object):
         return exit_code
     
     def handle_merge_cmd(self, app, args):
-        app.load_repo()
-        app.merge_repos(args.repos)
+        repo = app.load_repo()
+        app.merge_repos(repo, args.repos)
         return 0
     
     def handle_clone_cmd(self, app, args):
         origin = Connector.from_string(args.repo)
         try:
             origin.connect()
-            app.clone_repo(origin)
+            repo = app.clone_repo(origin)
         finally:
             origin.disconnect()
         return 0
