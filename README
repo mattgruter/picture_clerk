@@ -1,6 +1,0 @@
-PictureClerk is a command-line tool to assist you with your photography
-workflow.
-
-Execute
-    # picture_clerk/main.py -h
-to get some information on how to use it.

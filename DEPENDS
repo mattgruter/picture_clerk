@@ -1,9 +1,0 @@
-=== Core ===
- * 2.7 <= python < 3
- * python-pyexiv2
- * python-paramiko
- * python-dulwich
- * jhead
-
-=== UI ===
- * qiv
