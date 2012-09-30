@@ -8,6 +8,7 @@ import unittest
 import mock
 
 from cli import CLI
+from testlib import suppress_stderr
 
 
 @mock.patch('sys.exit')
@@ -36,14 +37,16 @@ class ArgsParsingTests(unittest.TestCase):
 
     def test_missing_args(self, MockApp):
         cli = CLI()
-        with self.assertRaises(SystemExit) as cm:
-            cli.main(['progname'])
+        with suppress_stderr():
+            with self.assertRaises(SystemExit) as cm:
+                cli.main(['progname'])
         self.assertNotEqual(cm.exception.code, 0, "Expected non-zero exit code")
 
     def test_unknown_args(self, MockApp):
         cli = CLI()
-        with self.assertRaises(SystemExit) as cm:
-            cli.main(['progname', 'asdf'])
+        with suppress_stderr():
+            with self.assertRaises(SystemExit) as cm:
+                cli.main(['progname', 'asdf'])
         self.assertNotEqual(cm.exception.code, 0, "Expected non-zero exit code")
 
 

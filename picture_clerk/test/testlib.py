@@ -9,6 +9,8 @@ import collections
 import hashlib
 import random
 import StringIO
+import sys
+import contextlib
 
 from connector import Connector
 from picture import Picture
@@ -79,3 +81,15 @@ class MockPicture(Picture):
         pics = [MockPicture(template % i) for i in range(count)]
         random.shuffle(pics)    # randomize list order
         return pics
+
+
+# from http://stackoverflow.com/questions/1809958/hide-stderr-output-in-unit-tests
+@contextlib.contextmanager
+def suppress_stderr():
+    stderr_orig = sys.stderr
+    class DevNull(object):
+        def write(self, param):
+            pass
+    sys.stderr = DevNull()
+    yield
+    sys.stderr = stderr_orig
