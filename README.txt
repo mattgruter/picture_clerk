@@ -12,6 +12,7 @@ Execute PictureClerk like this::
 
 This will print some helpful information about how to invoke the program.
 
+
 Dependencies
 ============
 
@@ -25,4 +26,22 @@ Core
 
 UI
 --
- qiv
+* qiv
+
+Test
+----
+* python-mock
+
+
+Development
+===========
+Use virtualenv to set up a clean Python installation for development.
+
+On Ubuntu install the following packages
+* python-virtualenv
+* python-dev
+
+In the virtualenv install the following packages with 'pip install ...':
+* paramiko
+* pyexiv2 (not availble through pip (yet), symlink from global dist/site-packages instead)
+* mock
