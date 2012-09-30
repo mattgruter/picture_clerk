@@ -1,5 +1,9 @@
-from __future__ import with_statement
+#!/usr/bin/env python
+
+import sys
 import hashlib
+
+from timeit import Timer
 
 def hashit(files, hashfunc):
     for path in files:
@@ -11,16 +15,8 @@ def hashit(files, hashfunc):
         digest = h.hexdigest()
 
 if __name__=='__main__':
-    from timeit import Timer
-    import os
-    import fnmatch
-    
+    files = sys.argv[1:]
     num_runs = 10
-    
-    path = '../test_repo'
-    dirlist = os.listdir(path)
-    files = fnmatch.filter(dirlist, "*.NEF")
-    files = [ os.path.join(path, f) for f in files ]
     
     for algorithm in ('md5', 'sha1'):
         hashfunc = eval('hashlib.' + algorithm)
@@ -30,8 +26,6 @@ if __name__=='__main__':
         # Time hashit with given hashfunction num_runs times and print the minimum execution time
         exec_times = t.repeat(repeat=num_runs, number=1)
         print 'Minimal execution time out of %i runs: %.3f sec' % (num_runs, min(exec_times))
+        print 'Average execution time out of %i runs: %.3f sec' % (num_runs, sum(exec_times)/len(exec_times))
+        print 'Maximal execution time out of %i runs: %.3f sec' % (num_runs, max(exec_times))
         print
-
-
- 
-
