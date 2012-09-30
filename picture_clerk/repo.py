@@ -85,7 +85,7 @@ class Repo(object):
         loading an existing repository from disk, loading and saving index &
         configuration and cloning an existing repository.
         
-        index      -- PictureIndex instance
+        index     -- PictureIndex instance
         config    -- repository specific configuration (type ConfigParser)
         connector -- Connector instance pointing to index's location
         
