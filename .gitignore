@@ -3,3 +3,6 @@
 *.swp
 test_repo
 .metadata
+dist
+build
+MANIFEST
