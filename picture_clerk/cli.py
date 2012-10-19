@@ -9,6 +9,7 @@ import logging
 import argparse
 import signal
 import sys
+import os
 
 from app import App
 from connector import Connector
@@ -110,12 +111,12 @@ class CLI(object):
             print '\n'.join('MISSING: %s' % pic for pic in missing_pics)
             exit_code = 1
         return exit_code
-    
+
     def handle_merge_cmd(self, app, args):
         repo = app.load_repo()
         app.merge_repos(repo, args.repos)
         return 0
-    
+
     def handle_clone_cmd(self, app, args):
         origin = Connector.from_string(args.repo)
         try:
@@ -124,7 +125,19 @@ class CLI(object):
         finally:
             origin.disconnect()
         return 0
-        
+
+    def handle_backup_cmd(self, app, args):
+        repo = app.load_repo()
+        connectors = [Connector.from_string(location)
+                      for location in args.locations]
+        try:
+            for connector in connectors:
+                connector.connect()
+            app.backup_repo(repo, *connectors)
+        finally:
+            for connector in connectors:
+                connector.disconnect()
+        return 0
 
     def parse_args(self, args):
         """Parse command line arguments and return result.
@@ -215,7 +228,7 @@ class CLI(object):
             'check',
             help="find corrupt or missing picture files")
         parser_check.set_defaults(func=self.handle_check_cmd)
-        
+
         # 'merge' subcommand
         parser_merge = subparsers.add_parser(
             'merge',
@@ -226,7 +239,7 @@ class CLI(object):
             nargs='+',
             help="repositories to merge into current one")
         parser_merge.set_defaults(func=self.handle_merge_cmd)
-        
+
         # 'clone' subcommand
         parser_clone = subparsers.add_parser(
             'clone',
@@ -237,13 +250,24 @@ class CLI(object):
             help="repository to clone (origin)")
         parser_clone.set_defaults(func=self.handle_clone_cmd)
 
+        # 'backup' subcommand
+        parser_backup = subparsers.add_parser(
+            'backup',
+            help="backup repository")
+        parser_backup.add_argument(
+            'locations',
+            nargs='*',
+            metavar='locations',
+            help="one or more backup location(s)")
+        parser_backup.set_defaults(func=self.handle_backup_cmd)
+
         return parser.parse_args(args)
 
     def main(self, argv):
         args = self.parse_args(argv[1:])
         self.setup_signal_handlers()
         self.setup_logging(args.verbosity)
-        connector = Connector.from_string('.')
+        connector = Connector.from_string(os.path.abspath('.'))
         try:
             connector.connect()
             app = App(connector)

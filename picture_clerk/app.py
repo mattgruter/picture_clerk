@@ -172,15 +172,15 @@ class App(object):
             else:
                 if checksum != pic.checksum:
                     corrupted.append(pic.filename)
-                    
+
         return corrupted, missing
-        
+
     def merge_repos(self, r, others):
         """Merge repositories into one.
         
         Arguments:
         r      -- merge 'others' repositories into this one
-        others -- rsitories to merge into 'r'
+        others -- repositories to merge into 'r'
         
         """
         for url in others:
@@ -189,21 +189,21 @@ class App(object):
             try:
                 connector.connect()
                 other = repo.Repo.load_from_disk(connector)
-                
+
                 # copy picture files
                 for picture in other.index.iterpics():
                     for fname in picture.get_filenames():
                         connector.copy(fname, self.connector, dest_path=fname)
             finally:
                 connector.disconnect()
-                    
+
             # add pictures to index
             r.index.add(other.index.iterpics())
-                    
+
         log.info("Saving index to file.")
         r.save_index_to_disk()
         return r
-        
+
     def clone_repo(self, origin):
         """Clone a repository.
         
@@ -221,6 +221,20 @@ class App(object):
         log.info("Cloned repository from %s to %s" % (origin.url.path,
                                                       self.connector.url.path))
         return clone
+
+    def backup_repo(self, r, *locations):
+        """Backup a repository to supplied locations.
+        
+        Arguments:
+        r         -- repository to be backed up
+        locations -- backup repo to these locations (1 or more location args)
+        
+        """
+        for location in locations:
+            backup_path = os.path.join(location.url.path, r.name)
+            location.update_url(urlparse.urlparse(backup_path))
+            repo.Repo.clone(r, location)
+            log.info("Backed up repository to %s" % location.url.path)
 
     def init_repo_logging(self, log_file, log_format):
         # repo file logging (only if repo is local)

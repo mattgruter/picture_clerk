@@ -1,0 +1,36 @@
+=======================
+How to use PictureClerk
+=======================
+
+PictureClerk is a command-line tool to assist you with your photography
+workflow.
+
+Execute PictureClerk like this::
+
+    #!/usr/bin/env bash
+    pic --help    
+
+This will print some information about the various PictureClerk commands:
+
+
+Backup
+======
+Clone the current repository to (multiple) backup location(s).
+    
+Usage:
+  
+    #!/usr/bin/env/bash
+    pic backup [PATH] [PATH] ...
+    
+Example:
+
+    #!/usr/bin/env/bash
+    pic backup /mnt/backup/photos ssh://server/backup/pics
+
+At each provided backup location PictureClerk creates a directory with the
+name of the repository, and then clones the repository into it.
+If the repository from the example above were located at 
+/home/user/photos/holidaypics, PictureClerk would create 2 clones at:
+- /mnt/backup/photos/holidaypics on the local filesystem
+- /backup/pics/holidaypics on the remote host "server"
+

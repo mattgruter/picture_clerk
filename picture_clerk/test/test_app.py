@@ -36,7 +36,7 @@ class InitRepoTests(unittest.TestCase):
 
     def tearDown(self):
         self.connector.disconnect()
-        
+
     def test_init_repo(self):
         app = App(self.connector)
         r = app.init_repo()
@@ -290,8 +290,8 @@ class CheckPicsTests(unittest.TestCase):
         self.assertSequenceEqual(corrupt, [])
         self.assertSequenceEqual(missing, [pic.filename
                                            for pic in self.repo.index.pics()])
-        
-        
+
+
 class CloneRepoTests(unittest.TestCase):
 
     def setUp(self):
@@ -311,19 +311,61 @@ class CloneRepoTests(unittest.TestCase):
     def test_clone_repo(self):
         app = App(self.connector)
         r = app.clone_repo(self.orig_connector)
-        
+
         self.assertEqual(r.config, self.orig.config)
         self.assertEqual(r.index, self.orig.index)
-        
+
     def test_clone_exists_on_disk(self):
         app = App(self.connector)
         app.clone_repo(self.orig_connector)
-        
+
         # load clone from disk
         clone = repo.Repo.load_from_disk(self.connector)
-        
+
         self.assertEqual(clone.config, self.orig.config)
         self.assertEqual(clone.index, self.orig.index)
+
+
+class BackupRepoTests(unittest.TestCase):
+
+    def setUp(self):
+        # create repo and disconnect from it before test
+        self.connector = MockConnector(urlparse.urlparse('/repo/path/'))
+        self.connector.connect()
+        self.repo = create_mock_repo(self.connector)
+
+        # connector to backup location
+        self.backup_connector1 = MockConnector(urlparse.urlparse('/backup1'))
+        self.backup_connector1.connect()
+        self.backup_connector2 = MockConnector(urlparse.urlparse('/backup2'))
+        self.backup_connector2.connect()
+
+    def tearDown(self):
+        self.connector.disconnect()
+        self.backup_connector1.disconnect()
+        self.backup_connector2.disconnect()
+
+    def test_backup_repo_single(self):
+        app = App(self.connector)
+        app.backup_repo(self.repo, self.backup_connector1)
+
+        # load backup from disk
+        backup = repo.Repo.load_from_disk(self.backup_connector1)
+
+        self.assertEqual(backup.config, self.repo.config)
+        self.assertEqual(backup.index, self.repo.index)
+
+    def test_backup_repo_many(self):
+        app = App(self.connector)
+        backup_connectors = (self.backup_connector1, self.backup_connector2)
+        app.backup_repo(self.repo, *backup_connectors)
+
+        for bc in backup_connectors:
+            # load backup from disk
+            backup = repo.Repo.load_from_disk(bc)
+
+            self.assertEqual(backup.config, self.repo.config)
+            self.assertEqual(backup.index, self.repo.index)
 
 
 if __name__ == "__main__":

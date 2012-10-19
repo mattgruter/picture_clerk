@@ -228,7 +228,7 @@ class SubcommandCheckTests(unittest.TestCase):
         app.check_pics.assert_called_once_with(repo)
         app.shutdown.assert_called_once_with()
         mock_exit.assert_called_once_with(1)
-        
+
 @mock.patch('sys.exit')
 @mock.patch('cli.App', spec_set=App)
 class SubcommandMergeTests(unittest.TestCase):
@@ -246,7 +246,7 @@ class SubcommandMergeTests(unittest.TestCase):
         app.merge_repos.assert_called_once_with(repo, self.repos)
         app.shutdown.assert_called_once_with()
         mock_exit.assert_called_once_with(0)
-        
+
 @mock.patch('sys.exit')
 @mock.patch('cli.App', spec_set=App)
 @mock.patch('cli.Connector', spec_set=Connector)
@@ -261,6 +261,48 @@ class SubcommandCloneTests(unittest.TestCase):
         app.clone_repo.assert_called_once_with(orig_connector)
         app.shutdown.assert_called_once_with()
         mock_exit.assert_called_once_with(0)
+
+@mock.patch('sys.exit')
+@mock.patch('cli.App', spec_set=App)
+@mock.patch('cli.Connector', spec_set=Connector)
+class BackupTests(unittest.TestCase):
+
+    def test_backup(self, MockConnector, MockApp, mock_exit):
+        backup_url = "/backup/url"
+        CLI().main(['progname', 'backup', backup_url])
+        app = MockApp()
+        repo = app.load_repo.return_value
+        
+        backup_connector = MockConnector.from_string(backup_url)
+        app.backup_repo.assert_called_once_with(repo, backup_connector)
+        app.shutdown.assert_called_once_with()
+        mock_exit.assert_called_once_with(0)
+
+    def test_backup_to_many_urls(self, MockConnector, MockApp, mock_exit):
+        backup_urls = ["url1", "url2", "url3"]
+        CLI().main(['progname', 'backup'] + backup_urls)
+        app = MockApp()
+        repo = app.load_repo.return_value
+
+        app = MockApp()
+        connectors = [ MockConnector.from_string(url) for url in backup_urls ]
+        app.backup_repo.assert_called_once_with(repo, *connectors)
+        app.shutdown.assert_called_once_with()
+        mock_exit.assert_called_once_with(0)
+
+    @unittest.skip("not implemented yet")
+    def test_backup_to_default(self, MockConnector, MockApp, mock_exit):
+        """ 'backup' without argument should use default urls in config. """
+        default_urls = ["url1", "url2", "url3"]
+        CLI().main(['progname', 'backup'])
+
+        app = MockApp()
+        connectors = [ MockConnector.from_string(url) for url in default_urls ]
+        app.backup_repo.assert_called_once_with(*connectors)
+        app.shutdown.assert_called_once_with()
+        mock_exit.assert_called_once_with(0)
+
+
 
 
 if __name__ == "__main__":
