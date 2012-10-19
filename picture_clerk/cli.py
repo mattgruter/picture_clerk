@@ -120,7 +120,7 @@ class CLI(object):
         origin = Connector.from_string(args.repo)
         try:
             origin.connect()
-            repo = app.clone_repo(origin)
+            app.clone_repo(origin)
         finally:
             origin.disconnect()
         return 0
