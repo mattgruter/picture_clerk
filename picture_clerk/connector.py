@@ -49,7 +49,7 @@ class Connector(object):
 
     def __repr__(self):
         return "%s(%s)" % (self.__class__.__name__, repr(self.url))
-    
+
     def __eq__(self, other):
         return self.url == other.url
 
@@ -239,8 +239,6 @@ class LocalConnector(Connector):
         Connector.__init__(self, url)
 
     def _connect(self):
-        if not os.path.exists(self.url.path):
-            raise ConnectionError(self.url)
         return
 
     def _disconnect(self):
