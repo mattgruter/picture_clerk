@@ -57,7 +57,7 @@ class Connector(object):
         if rel_path == '.':
             return self.url.path
         else:
-            return urlparse.urljoin(self.url.path, rel_path)
+            return os.path.join(self.url.path, rel_path)
 
     @abstractmethod
     def _connect(self):

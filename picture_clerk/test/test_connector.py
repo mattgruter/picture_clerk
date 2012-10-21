@@ -168,8 +168,11 @@ class ConnectorCopyTest(unittest.TestCase):
         self.src_tc.connect()
         self.dest_tc.connect()
         self.src_tc.copy('src_path', self.dest_tc, 'dest_path')
-        self.src_tc._open.assert_called_once_with('src_path', 'r')
-        self.dest_tc._open.assert_called_once_with('dest_path', 'w')
+
+        src_abspath = self.src_tc._rel2abs('src_path')
+        dest_abspath = self.dest_tc._rel2abs('dest_path')
+        self.src_tc._open.assert_called_once_with(src_abspath, 'r')
+        self.dest_tc._open.assert_called_once_with(dest_abspath, 'w')
 
 
 if __name__ == "__main__":
