@@ -78,7 +78,7 @@ class VersionMismatchError(Exception):
 
 class Repo(object):
 
-    def __init__(self, index, config, connector):
+    def __init__(self, index, config, connector, name=None):
         """A repository contains and manages a picture index.
         
         There are methods for creating a new repository directory structure,
@@ -93,6 +93,14 @@ class Repo(object):
         self.index = index
         self.config = config
         self.connector = connector
+        if not name:
+            # retrieve repo name from path
+            repo_path = self.connector.url.path # strip trailing "/"
+            if repo_path[-1] == os.path.sep:
+                repo_path = repo_path[:-1]
+            self.name = os.path.basename(repo_path)
+        else:
+            self.name = name
 
     def save_config_to_disk(self):
         """Save configuration to disk."""
@@ -171,23 +179,22 @@ class Repo(object):
         return repo
 
     @classmethod
-    def clone(cls, src, dest):
+    def clone(cls, repo, dest):
         """Clone an existing repository to a new location and return it.
         
-        src  -- connector pointing to source repo's location
-        dest -- connector pointing to location of new clone-index
+        repo -- source repo to be cloned
+        dest -- connector pointing to location of new repo-clone
         
         """
-        
         # clone repo
-        src_repo = Repo.load_from_disk(src)
-        repo = Repo.create_on_disk(connector=dest,
-                                   conf=src_repo.config,
-                                   pi=copy.deepcopy(src_repo.index))
+        clone = Repo.create_on_disk(connector=dest,
+                                    conf=copy.copy(repo.config),
+                                    pi=copy.deepcopy(repo.index))
 
         # clone pictures
-        for picture in src_repo.index.iterpics():
+        for picture in repo.index.iterpics():
             for fname in picture.get_filenames():
-                src.copy(fname, dest, dest_path=fname, create_parents=True)
+                repo.connector.copy(fname, dest, dest_path=fname,
+                                        create_parents=True)
 
-        return repo
+        return clone

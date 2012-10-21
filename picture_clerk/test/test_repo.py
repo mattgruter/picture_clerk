@@ -23,16 +23,28 @@ class BasicTests(unittest.TestCase):
         self.index = mock.Mock()
         self.config = mock.Mock()
         self.connector = mock.Mock()
+        self.name = mock.Mock()
 
     def tearDown(self):
         pass
 
     def test_attributes(self):
-        repo = Repo(self.index, self.config, self.connector)
+        repo = Repo(self.index, self.config, self.connector, self.name)
         self.assertIsInstance(repo, Repo)
         self.assertIs(repo.index, self.index)
         self.assertIs(repo.config, self.config)
         self.assertIs(repo.connector, self.connector)
+        self.assertIs(repo.name, self.name)
+
+    def test_repo_name_from_path(self):
+        self.connector.url.path = "/path/to/repo"
+        repo = Repo(self.index, self.config, self.connector)
+        self.assertEqual(repo.name, "repo")
+
+    def test_repo_name_from_path_with_trailing_slash(self):
+        self.connector.url.path = "/path/to/repo/"
+        repo = Repo(self.index, self.config, self.connector)
+        self.assertEqual(repo.name, "repo")
 
 
 class LoadTests(unittest.TestCase):
@@ -209,7 +221,7 @@ class FactoryTests(unittest.TestCase):
         src_repo = Repo.create_on_disk(self.connector, self.conf, self.pi)
         dest_connector = MockConnector(urlparse.urlparse('/destrepo/baseurl/'))
         dest_connector.connect()
-        dest_repo = Repo.clone(src=self.connector, dest=dest_connector)
+        dest_repo = Repo.clone(repo=src_repo, dest=dest_connector)
 
         self.assertIsInstance(dest_repo, Repo)
         self.assertEqual(dest_repo.config, src_repo.config)

@@ -6,6 +6,7 @@
 """
 import os
 import logging
+import urlparse
 
 import repo
 
@@ -207,15 +208,19 @@ class App(object):
         """Clone a repository.
         
         Arguments:
-        origin -- repository to clone from (source)
+        origin -- repository to clone from (source connector)
         
         """
-        r = repo.Repo.clone(origin, self.connector)
-        self.init_repo_logging(r.config['logging.file'],
-                               r.config['logging.format'])
+        source = repo.Repo.load_from_disk(origin)
+        # create clone at "./<reponame>" not at "." directly
+        clone_path = os.path.join(self.connector.url.path, source.name)
+        self.connector.update_url(urlparse.urlparse(clone_path))
+        clone = repo.Repo.clone(source, self.connector)
+        self.init_repo_logging(clone.config['logging.file'],
+                               clone.config['logging.format'])
         log.info("Cloned repository from %s to %s" % (origin.url.path,
                                                       self.connector.url.path))
-        return r
+        return clone
 
     def init_repo_logging(self, log_file, log_format):
         # repo file logging (only if repo is local)

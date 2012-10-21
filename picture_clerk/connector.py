@@ -91,6 +91,15 @@ class Connector(object):
             # do nothing if we're already disconnected
             pass
 
+    def update_url(self, url):
+        """Change connector's URL.
+        
+        Arguments:
+        url -- new url (of type urlparse.ParseResult)
+        
+        """
+        self.url = url
+
     @abstractmethod
     def _open(self, path, mode):
         raise NotImplementedError
