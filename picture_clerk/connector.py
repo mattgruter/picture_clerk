@@ -7,6 +7,8 @@
 import os
 import urlparse
 import logging
+import errno
+import contextlib
 
 import paramiko
 
@@ -267,8 +269,11 @@ class SSHConnector(Connector):
         self._ssh = paramiko.SSHClient()
         self._ssh.load_host_keys(os.path.expanduser('~/.ssh/known_hosts'))
         try:
-            self._ssh.connect(self.url.hostname, port=self.url.port,
-                              username=self.url.username)
+            if not self.url.port:
+                self._ssh.connect(self.url.hostname, username=self.url.username)
+            else:
+                self._ssh.connect(self.url.hostname, port=self.url.port,
+                                  username=self.url.username)
             self._sftp = self._ssh.open_sftp()
         except paramiko.SSHException:
             raise ConnectionError(self.url)
@@ -278,7 +283,18 @@ class SSHConnector(Connector):
         self._ssh.close()
 
     def _open(self, path, mode):
-        return self._sftp.open(path, mode)
+        return contextlib.closing(self._sftp.open(path, mode))
+
+    def _exists(self, path):
+        """Equivalent to os.path.exists for SFTP."""
+        try:
+            self._sftp.stat(path)
+        except IOError, e:
+            if e.errno == errno.ENOENT: # "No such file or directory"
+                return False
+            raise
+        else:
+            return True
 
     def _mkdir(self, path, mode):
         self._sftp.mkdir(path, mode)

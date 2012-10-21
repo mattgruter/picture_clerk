@@ -39,6 +39,7 @@ Features
 * Logging
   Don't log everything to repo log. Log only stuff relevant to repo: pics added/removed/edited, etc
 
+
 Tech
 ====
 
@@ -51,3 +52,9 @@ Tech
   Use dependency injection (e.g. snake-guice): http://www.connorgarvey.com/blog/?p=184
 
 
+Known issues
+============
+* SSHConnector.open returns a context manager, not the file handle directly. The method can be used
+inside a "with" statement-block, not otherwise. However it should be possible to use the method like
+the Python's built-in open() method which returns an object that's both a context manager and a file
+handle.

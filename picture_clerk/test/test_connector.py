@@ -149,20 +149,28 @@ class ConnectorCopyTest(unittest.TestCase):
     def setUp(self):
         src_url = urlparse("testurl1")
         self.src_tc = TestConnector(src_url)
+        self.src_tc.connect()
+
         dest_url = urlparse("testurl2")
         self.dest_tc = TestConnector(dest_url)
+        self.dest_tc.connect()
+
+    def tearDown(self):
+        self.src_tc.disconnect()
+        self.dest_tc.disconnect()
 
     def testCopyFailSrcDisconnected(self):
         """copy() should raise NotConnectedError if src is not connected."""
+        self.src_tc.disconnect()
         self.assertRaises(NotConnectedError, self.src_tc.copy,
                           'src_path', self.dest_tc, 'dest_path')
-        
+
     def testCopyFailDestDisconnected(self):
         """copy() should raise NotConnectedError if dest is not connected."""
-        self.src_tc.connect()
+        self.dest_tc.disconnect()
         self.assertRaises(NotConnectedError, self.src_tc.copy,
                           'src_path', self.dest_tc, 'dest_path')
-        
+
     def testCopy(self):
         """copy() should open src path for reading and dest path for writing."""
         self.src_tc.connect()
