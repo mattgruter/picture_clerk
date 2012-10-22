@@ -10,9 +10,9 @@ import urlparse
 
 import index
 import repo
+import app
 
 from testlib import MockConnector, MockPicture
-from app import App
 
 
 def create_mock_repo(connector):
@@ -38,8 +38,7 @@ class InitRepoTests(unittest.TestCase):
         self.connector.disconnect()
 
     def test_init_repo(self):
-        app = App(self.connector)
-        r = app.init_repo()
+        r = app.init_repo(self.connector)
 
         # repo config should be default config
         self.assertEqual(r.config, repo.new_repo_config())
@@ -47,8 +46,7 @@ class InitRepoTests(unittest.TestCase):
         self.assertEqual(r.index, index.PictureIndex())
 
     def test_init_repo_on_disk(self):
-        app = App(self.connector)
-        r = app.init_repo()
+        r = app.init_repo(self.connector)
 
         # check that config & files were opened
         self.assertTrue(self.connector.opened(repo.CONFIG_FILE))
@@ -70,8 +68,7 @@ class LoadRepoTests(unittest.TestCase):
         self.connector.disconnect()
 
     def test_load_repo(self):
-        app = App(self.connector)
-        r = app.load_repo()
+        r = app.load_repo(self.connector)
 
         self.assertEqual(r.index, self.repo.index)
         self.assertEqual(r.config, self.repo.config)
@@ -93,9 +90,7 @@ class AddRemovePicsTests(unittest.TestCase):
 
     @mock.patch('os.path.exists')
     def test_add_pics(self, mock_exists):
-        app = App(self.connector)
-        app.add_pics(self.repo, ('testfile1', 'testfile2'),
-                     process_enabled=False)
+        app.add_pics(self.repo, ('testfile1', 'testfile2'), process=False)
 
         # load repo from disk and check it's config & index
         r = repo.Repo.load_from_disk(self.connector)
@@ -106,7 +101,6 @@ class AddRemovePicsTests(unittest.TestCase):
             self.assertIn(old_pic.filename, r.index)
 
     def test_remove_pics(self):
-        app = App(self.connector)
         pics = self.repo.index.pics()
         pics_to_remove = pics[2:5]
         pics_remaining = pics[:2] + pics[5:]
@@ -140,7 +134,6 @@ class ListPicsTests(unittest.TestCase):
         self.connector.disconnect()
 
     def test_list_all(self):
-        app = App(self.connector)
         template = "%s\n  Sidecar files:\n   thumbnail: %s"
         expected = '\n'.join([template % (pic.filename,
                                           pic.get_thumbnail_filenames()[0])
@@ -148,19 +141,16 @@ class ListPicsTests(unittest.TestCase):
         self.assertEqual(app.list_pics(self.repo, 'all'), expected)
 
     def test_list_thumbnails(self):
-        app = App(self.connector)
         expected = '\n'.join(['\n'.join(pic.get_thumbnail_filenames())
                               for pic in self.repo.index.pics()])
         self.assertEqual(app.list_pics(self.repo, 'thumbnails'), expected)
 
     def test_list_sidecars(self):
-        app = App(self.connector)
         expected = '\n'.join(['\n'.join(pic.get_sidecar_filenames())
                               for pic in self.repo.index.pics()])
         self.assertEqual(app.list_pics(self.repo, 'sidecars'), expected)
 
     def test_list_checksums(self):
-        app = App(self.connector)
         expected = '\n'.join(['%s *%s' % (pic.checksum, pic.filename)
                               for pic in self.repo.index.pics()])
         self.assertEqual(app.list_pics(self.repo, 'checksums'), expected)
@@ -179,7 +169,6 @@ class MigrateRepoTests(unittest.TestCase):
         repo_old = create_mock_repo(self.connector)
         repo_old.config['index.format_version'] = 0
         repo_old.save_config_to_disk()
-        app = App(self.connector)
         app.migrate_repo(repo_old)
 
         # load repo from disk and check it's index version
@@ -189,7 +178,7 @@ class MigrateRepoTests(unittest.TestCase):
         self.assertIsNot(repo_new.config, repo_old.config)
 
 
-@mock.patch('app.App.remove_pics')
+@mock.patch('app.remove_pics')
 @mock.patch('app.Viewer', spec_set=True)
 class ViewPicsTests(unittest.TestCase):
 
@@ -205,7 +194,6 @@ class ViewPicsTests(unittest.TestCase):
         mock_viewer_inst = MockViewer.return_value
         mock_viewer_inst.show.return_value = []
 
-        app = App(self.connector)
         app.view_pics(self.repo, prog=None)
 
         MockViewer.assert_called_once_with(self.repo.config['viewer.prog'])
@@ -216,7 +204,6 @@ class ViewPicsTests(unittest.TestCase):
         mock_viewer_inst = MockViewer.return_value
         mock_viewer_inst.show.return_value = []
 
-        app = App(self.connector)
         prog = 'awesome-viewer-app arg1 --opt1 -o2'
         app.view_pics(self.repo, prog)
 
@@ -228,7 +215,6 @@ class ViewPicsTests(unittest.TestCase):
         mock_viewer_inst = MockViewer.return_value
         mock_viewer_inst.show.return_value = self.repo.index.pics()[4:7]
 
-        app = App(self.connector)
         app.view_pics(self.repo, prog=None)
 
         pic_filenames = [pic.filename for pic in self.repo.index.pics()[4:7]]
@@ -253,14 +239,12 @@ class CheckPicsTests(unittest.TestCase):
     def test_empty_repo(self):
         r = repo.Repo(index.PictureIndex(), {}, self.connector)
 
-        app = App(self.connector)
         corrupt, missing = app.check_pics(r)
 
         self.assertSequenceEqual(corrupt, [])
         self.assertSequenceEqual(missing, [])
 
     def test_all_ok(self):
-        app = App(self.connector)
         corrupt, missing = app.check_pics(self.repo)
 
         self.assertSequenceEqual(corrupt, [])
@@ -272,7 +256,6 @@ class CheckPicsTests(unittest.TestCase):
             with self.connector.open(pic.filename, 'w') as buf:
                 buf.write('garbage')
 
-        app = App(self.connector)
         corrupt, missing = app.check_pics(self.repo)
 
         self.assertSequenceEqual(corrupt, [pic.filename
@@ -284,7 +267,6 @@ class CheckPicsTests(unittest.TestCase):
             raise OSError
         self.connector.open = raise_oserror
 
-        app = App(self.connector)
         corrupt, missing = app.check_pics(self.repo)
 
         self.assertSequenceEqual(corrupt, [])
@@ -296,34 +278,32 @@ class CloneRepoTests(unittest.TestCase):
 
     def setUp(self):
         # create original repo and disconnect from it before test
-        self.orig_connector = MockConnector(urlparse.urlparse('/orig/path/'))
-        self.orig_connector.connect()
-        self.orig = create_mock_repo(self.orig_connector)
+        self.src = MockConnector(urlparse.urlparse('/orig/path/'))
+        self.src.connect()
+        self.origin = create_mock_repo(self.src)
 
         # connector to clone
-        self.connector = MockConnector(urlparse.urlparse('/clone/path/'))
-        self.connector.connect()
+        self.dest = MockConnector(urlparse.urlparse('/clone/path/'))
+        self.dest.connect()
 
     def tearDown(self):
-        self.orig_connector.disconnect()
-        self.connector.disconnect()
+        self.src.disconnect()
+        self.dest.disconnect()
 
     def test_clone_repo(self):
-        app = App(self.connector)
-        r = app.clone_repo(self.orig_connector)
+        clone = app.clone_repo(self.src, self.dest)
 
-        self.assertEqual(r.config, self.orig.config)
-        self.assertEqual(r.index, self.orig.index)
+        self.assertEqual(clone.config, self.origin.config)
+        self.assertEqual(clone.index, self.origin.index)
 
     def test_clone_exists_on_disk(self):
-        app = App(self.connector)
-        app.clone_repo(self.orig_connector)
+        app.clone_repo(self.src, self.dest)
 
         # load clone from disk
-        clone = repo.Repo.load_from_disk(self.connector)
+        clone = repo.Repo.load_from_disk(self.dest)
 
-        self.assertEqual(clone.config, self.orig.config)
-        self.assertEqual(clone.index, self.orig.index)
+        self.assertEqual(clone.config, self.origin.config)
+        self.assertEqual(clone.index, self.origin.index)
 
 
 class BackupRepoTests(unittest.TestCase):
@@ -346,7 +326,6 @@ class BackupRepoTests(unittest.TestCase):
         self.backup_connector2.disconnect()
 
     def test_backup_repo_single(self):
-        app = App(self.connector)
         app.backup_repo(self.repo, self.backup_connector1)
 
         # load backup from disk
@@ -356,7 +335,6 @@ class BackupRepoTests(unittest.TestCase):
         self.assertEqual(backup.index, self.repo.index)
 
     def test_backup_repo_many(self):
-        app = App(self.connector)
         backup_connectors = (self.backup_connector1, self.backup_connector2)
         app.backup_repo(self.repo, *backup_connectors)
 

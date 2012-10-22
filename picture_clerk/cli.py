@@ -11,7 +11,8 @@ import signal
 import sys
 import os
 
-from app import App
+import app
+
 from connector import Connector
 
 
@@ -62,46 +63,46 @@ class CLI(object):
         console.setFormatter(formatter)
         root_logger.addHandler(console)
 
-    def dispatch_args(self, app, args):
+    def dispatch_args(self, args, cwd):
         try:
-            exit_code = args.func(app, args)
+            exit_code = args.func(args, cwd)
         except:
             log.info("", exc_info=sys.exc_info())
             log.error(sys.exc_info()[1])
             exit_code = 1
         return exit_code
 
-    def handle_init_cmd(self, app, args):
-        app.init_repo()
+    def handle_init_cmd(self, args, cwd):
+        app.init_repo(cwd)
         return 0
 
-    def handle_add_cmd(self, app, args):
-        repo = app.load_repo()
+    def handle_add_cmd(self, args, cwd):
+        repo = app.load_repo(cwd)
         app.add_pics(repo, args.files, args.process, args.recipe)
         return 0
 
-    def handle_remove_cmd(self, app, args):
-        repo = app.load_repo()
+    def handle_remove_cmd(self, args, cwd):
+        repo = app.load_repo(cwd)
         app.remove_pics(repo, args.files)
         return 0
 
-    def handle_list_cmd(self, app, args):
-        repo = app.load_repo()
+    def handle_list_cmd(self, args, cwd):
+        repo = app.load_repo(cwd)
         print app.list_pics(repo, args.mode)
         return 0
 
-    def handle_view_cmd(self, app, args):
-        repo = app.load_repo()
+    def handle_view_cmd(self, args, cwd):
+        repo = app.load_repo(cwd)
         app.view_pics(repo, args.viewer)
         return 0
 
-    def handle_migrate_cmd(self, app, args):
-        repo = app.load_repo()
+    def handle_migrate_cmd(self, args, cwd):
+        repo = app.load_repo(cwd)
         app.migrate_repo(repo)
         return 0
 
-    def handle_check_cmd(self, app, args):
-        repo = app.load_repo()
+    def handle_check_cmd(self, args, cwd):
+        repo = app.load_repo(cwd)
         corrupt_pics, missing_pics = app.check_pics(repo)
         exit_code = 0
         if corrupt_pics:
@@ -112,22 +113,22 @@ class CLI(object):
             exit_code = 1
         return exit_code
 
-    def handle_merge_cmd(self, app, args):
-        repo = app.load_repo()
+    def handle_merge_cmd(self, args, cwd):
+        repo = app.load_repo(cwd)
         app.merge_repos(repo, args.repos)
         return 0
 
-    def handle_clone_cmd(self, app, args):
-        origin = Connector.from_string(args.repo)
+    def handle_clone_cmd(self, args, cwd):
+        src = Connector.from_string(args.repo)
         try:
-            origin.connect()
-            app.clone_repo(origin)
+            src.connect()
+            app.clone_repo(src, cwd)
         finally:
-            origin.disconnect()
+            src.disconnect()
         return 0
 
-    def handle_backup_cmd(self, app, args):
-        repo = app.load_repo()
+    def handle_backup_cmd(self, args, cwd):
+        repo = app.load_repo(cwd)
         connectors = [Connector.from_string(location)
                       for location in args.locations]
         try:
@@ -270,14 +271,13 @@ class CLI(object):
         connector = Connector.from_string(os.path.abspath('.'))
         try:
             connector.connect()
-            app = App(connector)
-            exit_code = self.dispatch_args(app, args)
+            exit_code = self.dispatch_args(args, cwd=connector)
         finally:
             connector.disconnect()
-        app.shutdown()
         self.shutdown(exit_code)
 
     def shutdown(self, exit_code):
+        app.shutdown()
         logging.shutdown()
         sys.exit(exit_code)
 
