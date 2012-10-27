@@ -11,6 +11,7 @@ import random
 import StringIO
 import sys
 import contextlib
+import urlparse
 
 from connector import Connector
 from picture import Picture
@@ -35,6 +36,8 @@ class MockFile(StringIO.StringIO):
 
 
 class MockConnector(Connector):
+
+    connectors = dict()
 
     def __init__(self, url):
         Connector.__init__(self, url)
@@ -67,6 +70,15 @@ class MockConnector(Connector):
 
     def get_file(self, rel_path):
         return self.buffers[self._rel2abs(rel_path)]
+
+    @classmethod
+    def from_string(cls, path):
+        try:
+            return cls.connectors[path]
+        except KeyError:
+            c = cls(urlparse.urlparse(path))
+            cls.connectors[path] = c
+            return c
 
 
 class MockPicture(Picture):
