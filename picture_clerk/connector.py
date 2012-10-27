@@ -67,15 +67,12 @@ class Connector(object):
 
     def connect(self):
         """Setup connection to base URL."""
-        #@todo: connect & disconnect should be implemented as ContextManager so
-        #       that they can be used with the "with" statement.
         if not self.isconnected:
             log.debug("Connecting to '%s'" % self.url.geturl())
             self._connect()
             self.isconnected = True
         else:
-            # do nothing if we're already connected
-            pass
+            pass  # do nothing if we're already connected
 
     @abstractmethod
     def _disconnect(self):
@@ -90,6 +87,15 @@ class Connector(object):
         else:
             # do nothing if we're already disconnected
             pass
+
+    @contextlib.contextmanager
+    def connected(self):
+        """Return a contextmanager that handles connect & disconnect."""
+        self.connect()
+        try:
+            yield
+        finally:
+            self.disconnect()
 
     def update_url(self, url):
         """Change connector's URL.
@@ -241,7 +247,7 @@ class Connector(object):
             else:
                 raise NotImplementedError
         else:
-            return cls(urlparse.urlparse(url))
+            return cls(url)
 
 
 class LocalConnector(Connector):
