@@ -57,10 +57,15 @@ def add_pics(rep, paths, process, recipe=None):
     
     Arguments:
     rep     -- Add pictures to this repository.
-    paths   -- Paths of the pictures to be added.
+    paths   -- Paths of the pictures to be added (check if path exists).
     process -- Boolean flag if added pictures should be processed.
     recipe  -- Recipe to use for picture processing.
     """
+
+    for path in paths:
+        if not os.path.exists(path):
+            log.warning("File not found: '%s'. Skipping it." % path)
+
     pics = [Picture(path) for path in paths if os.path.exists(path)]
     rep.index.add(pics)
 
