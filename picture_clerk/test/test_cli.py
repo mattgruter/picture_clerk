@@ -9,21 +9,7 @@ import mock
 import os
 
 from cli import CLI
-from connector import Connector
 from testlib import suppress_stderr
-
-
-@mock.patch('sys.exit')
-class BasicTests(unittest.TestCase):
-
-    @mock.patch('app.init_repo')
-    def test_main(self, mock_init, mock_exit):
-        CLI().main(['progname', 'init'])
-        mock_exit.assert_called_once_with(0)        # error-free exit
-
-    def test_shutdown(self, mock_exit):
-        CLI().shutdown(17)
-        mock_exit.assert_called_once_with(17)
 
 
 class ArgsParsingTests(unittest.TestCase):
@@ -46,272 +32,217 @@ class ArgsParsingTests(unittest.TestCase):
         self.assertNotEqual(cm.exception.code, 0, "Expected non-zero exit code")
 
 
-@mock.patch('sys.exit')
-@mock.patch('cli.app')
-class SubcommandInitTests(unittest.TestCase):
+class CLIBaseTest(unittest.TestCase):
+
+    def create_patch(self, name):
+        patcher = mock.patch(name)
+        thing = patcher.start()
+        self.addCleanup(patcher.stop)
+        return thing
 
     def setUp(self):
-        self.cwd = Connector.from_string(os.path.abspath('.'))
+        self.cwd = os.path.abspath('.')
 
-    def test_init(self, mock_app, mock_exit):
+        self.mock_sys_exit = self.create_patch('sys.exit')
+        self.mock_init_repo = self.create_patch('app.init_repo')
+        self.mock_load_repo = self.create_patch('app.load_repo')
+        self.mock_add_pics = self.create_patch('app.add_pics')
+        self.mock_remove_pics = self.create_patch('app.remove_pics')
+        self.mock_list_pics = self.create_patch('app.list_pics')
+        self.mock_view_pics = self.create_patch('app.view_pics')
+        self.mock_migrate_repo = self.create_patch('app.migrate_repo')
+        self.mock_check_pics = self.create_patch('app.check_pics')
+        self.mock_merge_repos = self.create_patch('app.merge_repos')
+        self.mock_clone_repo = self.create_patch('app.clone_repo')
+        self.mock_backup_repo = self.create_patch('app.backup_repo')
+        self.mock_app_shutdown = self.create_patch('app.shutdown')
+
+
+class BasicTests(CLIBaseTest):
+
+    def test_main(self):
+        CLI().main(['progname', 'init'])
+        self.mock_app_shutdown.assert_called_once_with()
+        self.mock_sys_exit.assert_called_once_with(0)  # error-free exit
+
+    def test_shutdown(self):
+        CLI().shutdown(17)
+        self.mock_app_shutdown.assert_called_once_with()
+        self.mock_sys_exit.assert_called_once_with(17)
+
+
+class InitTests(CLIBaseTest):
+
+    def test_init(self):
         CLI().main(['progname', 'init'])
 
-        mock_app.init_repo.assert_called_once_with(self.cwd)
-        mock_app.shutdown.assert_called_once_with()
-        mock_exit.assert_called_once_with(0)
+        self.mock_init_repo.assert_called_once_with(self.cwd)
+        self.mock_sys_exit.assert_called_once_with(0)
 
 
-@mock.patch('sys.exit')
-@mock.patch('cli.app')
-class SubcommandAddTests(unittest.TestCase):
+class AddTests(CLIBaseTest):
 
-    def setUp(self):
-        self.files = ['file1', 'file2', 'file3']
-        self.cwd = Connector.from_string(os.path.abspath('.'))
+    def test_add(self):
+        files = ['file1', 'file2', 'file3']
+        CLI().main(['progname', 'add'] + files)
 
-    def test_add(self, mock_app, mock_exit):
-        repo = mock_app.load_repo.return_value
+        self.mock_load_repo.assert_called_once_with(self.cwd)
+        repo = self.mock_load_repo.return_value
+        self.mock_add_pics.assert_called_once_with(repo, files, True, None)
+        self.mock_sys_exit.assert_called_once_with(0)
 
-        CLI().main(['progname', 'add'] + self.files)
+    def test_add_without_processing(self):
+        files = ['file1', 'file2', 'file3']
+        CLI().main(['progname', 'add'] + files + ['--noprocess'])
 
-        mock_app.load_repo.assert_called_once_with(self.cwd)
-        mock_app.add_pics.assert_called_once_with(repo, self.files, True, None)
-        mock_app.shutdown.assert_called_once_with()
-        mock_exit.assert_called_once_with(0)
+        self.mock_load_repo.assert_called_once_with(self.cwd)
+        repo = self.mock_load_repo.return_value
+        self.mock_add_pics.assert_called_once_with(repo, files, False, None)
+        self.mock_sys_exit.assert_called_once_with(0)
 
-    def test_add_without_processing(self, mock_app, mock_exit):
-        repo = mock_app.load_repo.return_value
+    def test_add_with_process_recipe(self):
+        files = ['file1', 'file2', 'file3']
+        recipe = 'FOO.BAR'
+        CLI().main(['progname', 'add'] + files + ['--recipe', recipe])
 
-        CLI().main(['progname', 'add'] + self.files + ['--noprocess'])
-
-        mock_app.load_repo.assert_called_once_with(self.cwd)
-        mock_app.add_pics.assert_called_once_with(repo, self.files, False, None)
-        mock_app.shutdown.assert_called_once_with()
-        mock_exit.assert_called_once_with(0)
-
-    def test_add_with_process_recipe(self, mock_app, mock_exit):
-        repo = mock_app.load_repo.return_value
-
-        CLI().main(['progname', 'add'] + self.files + ['--recipe', 'FOO,BAR'])
-
-        mock_app.load_repo.assert_called_once_with(self.cwd)
-        mock_app.add_pics.assert_called_once_with(repo, self.files,
-                                                  True, 'FOO,BAR')
-        mock_app.shutdown.assert_called_once_with()
-        mock_exit.assert_called_once_with(0)
+        self.mock_load_repo.assert_called_once_with(self.cwd)
+        repo = self.mock_load_repo.return_value
+        self.mock_add_pics.assert_called_once_with(repo, files, True, recipe)
+        self.mock_sys_exit.assert_called_once_with(0)
 
 
-@mock.patch('sys.exit')
-@mock.patch('cli.app')
-class SubcommandRemoveTests(unittest.TestCase):
+class RemoveTests(CLIBaseTest):
 
-    def setUp(self):
-        self.files = ['file1', 'file2', 'file3']
-        self.cwd = Connector.from_string(os.path.abspath('.'))
+    def test_remove(self):
+        files = ['file1', 'file2', 'file3']
+        CLI().main(['progname', 'remove'] + files)
 
-    def test_remove(self, mock_app, mock_exit):
-        repo = mock_app.load_repo.return_value
-
-        CLI().main(['progname', 'remove'] + self.files)
-
-        mock_app.load_repo.assert_called_once_with(self.cwd)
-        mock_app.remove_pics.assert_called_once_with(repo, self.files)
-        mock_app.shutdown.assert_called_once_with()
-        mock_exit.assert_called_once_with(0)
+        self.mock_load_repo.assert_called_once_with(self.cwd)
+        repo = self.mock_load_repo.return_value
+        self.mock_remove_pics.assert_called_once_with(repo, files)
+        self.mock_sys_exit.assert_called_once_with(0)
 
 
-@mock.patch('sys.exit')
-@mock.patch('cli.app')
-class SubcommandListTests(unittest.TestCase):
+class ListTests(CLIBaseTest):
 
-    def setUp(self):
-        self.cwd = Connector.from_string(os.path.abspath('.'))
-
-    def test_list_default(self, mock_app, mock_exit):
-        repo = mock_app.load_repo.return_value
-
+    def test_list_default(self):
         CLI().main(['progname', 'list'])
 
-        mock_app.load_repo.assert_called_once_with(self.cwd)
-        mock_app.list_pics.assert_called_once_with(repo, 'all')
-        mock_app.shutdown.assert_called_once_with()
-        mock_exit.assert_called_once_with(0)
+        self.mock_load_repo.assert_called_once_with(self.cwd)
+        repo = self.mock_load_repo.return_value
+        self.mock_list_pics.assert_called_once_with(repo, 'all')
+        self.mock_sys_exit.assert_called_once_with(0)
 
-    def test_list_modes(self, mock_app, mock_exit):
-        repo = mock_app.load_repo.return_value
+    def test_list_modes(self):
+        repo = self.mock_load_repo.return_value
         for mode in ['all', 'thumbnails', 'sidecars', 'checksums']:
-            mock_app.reset_mock()
-            mock_exit.reset_mock()
+            self.mock_load_repo.reset_mock()
+            self.mock_list_pics.reset_mock()
+            self.mock_sys_exit.reset_mock()
 
             CLI().main(['progname', 'list', mode])
 
-            mock_app.load_repo.assert_called_once_with(self.cwd)
-            mock_app.list_pics.assert_called_once_with(repo, mode)
-            mock_app.shutdown.assert_called_once_with()
-            mock_exit.assert_called_once_with(0)
+            self.mock_load_repo.assert_called_once_with(self.cwd)
+            repo = self.mock_load_repo.return_value
+            self.mock_list_pics.assert_called_once_with(repo, mode)
+            self.mock_sys_exit.assert_called_once_with(0)
 
 
-@mock.patch('sys.exit')
-@mock.patch('cli.app')
-class SubcommandViewTests(unittest.TestCase):
+class ViewTests(CLIBaseTest):
 
-    def setUp(self):
-        self.cwd = Connector.from_string(os.path.abspath('.'))
-
-    def test_default_viewer(self, mock_app, mock_exit):
-        repo = mock_app.load_repo.return_value
-
+    def test_default_viewer(self):
         CLI().main(['progname', 'view'])
 
-        mock_app.load_repo.assert_called_once_with(self.cwd)
-        mock_app.view_pics.assert_called_once_with(repo, None)
-        mock_app.shutdown.assert_called_once_with()
-        mock_exit.assert_called_once_with(0)
+        self.mock_load_repo.assert_called_once_with(self.cwd)
+        repo = self.mock_load_repo.return_value
+        self.mock_view_pics.assert_called_once_with(repo, None)
+        self.mock_sys_exit.assert_called_once_with(0)
 
-    def test_supplied_viewer(self, mock_app, mock_exit):
-        repo = mock_app.load_repo.return_value
+    def test_supplied_viewer(self):
         prog = 'fooview fooviewarg --fooviewopt'
-
         CLI().main(['progname', 'view', '--viewer', prog])
 
-        mock_app.load_repo.assert_called_once_with(self.cwd)
-        mock_app.view_pics.assert_called_once_with(repo, prog)
-        mock_app.shutdown.assert_called_once_with()
-        mock_exit.assert_called_once_with(0)
+        self.mock_load_repo.assert_called_once_with(self.cwd)
+        repo = self.mock_load_repo.return_value
+        self.mock_view_pics.assert_called_once_with(repo, prog)
+        self.mock_sys_exit.assert_called_once_with(0)
 
 
-@mock.patch('sys.exit')
-@mock.patch('cli.app')
-class SubcommandMigrateTests(unittest.TestCase):
+class MigrateTests(CLIBaseTest):
 
-    def setUp(self):
-        self.cwd = Connector.from_string(os.path.abspath('.'))
-
-    def test_migrate(self, mock_app, mock_exit):
-        repo = mock_app.load_repo.return_value
-
+    def test_migrate(self):
         CLI().main(['progname', 'migrate'])
 
-        mock_app.load_repo.assert_called_once_with(self.cwd)
-        mock_app.migrate_repo.assert_called_once_with(repo)
-        mock_app.shutdown.assert_called_once_with()
-        mock_exit.assert_called_once_with(0)
+        self.mock_load_repo.assert_called_once_with(self.cwd)
+        repo = self.mock_load_repo.return_value
+        self.mock_migrate_repo.assert_called_once_with(repo)
+        self.mock_sys_exit.assert_called_once_with(0)
 
 
-@mock.patch('sys.exit')
-@mock.patch('cli.app')
-class SubcommandCheckTests(unittest.TestCase):
+class CheckTests(CLIBaseTest):
 
-    def setUp(self):
-        self.cwd = Connector.from_string(os.path.abspath('.'))
-
-    def test_check(self, mock_app, mock_exit):
-        repo = mock_app.load_repo.return_value
-        mock_app.check_pics.return_value = ([], [])
-
+    def test_check(self):
+        self.mock_check_pics.return_value = ([], [])
         CLI().main(['progname', 'check'])
 
-        mock_app.load_repo.assert_called_once_with(self.cwd)
-        mock_app.check_pics.assert_called_once_with(repo)
-        mock_app.shutdown.assert_called_once_with()
-        mock_exit.assert_called_once_with(0)
+        self.mock_load_repo.assert_called_once_with(self.cwd)
+        repo = self.mock_load_repo.return_value
+        self.mock_check_pics.assert_called_once_with(repo)
+        self.mock_sys_exit.assert_called_once_with(0)
 
-    def test_check_fail(self, mock_app, mock_exit):
-        repo = mock_app.load_repo.return_value
-        mock_app.check_pics.return_value = (['corrupt pic'], ['missing pic'])
-
+    def test_check_fail(self):
+        self.mock_check_pics.return_value = (['corrupt pic'], ['missing pic'])
         CLI().main(['progname', 'check'])
 
-        mock_app.load_repo.assert_called_once_with(self.cwd)
-        mock_app.check_pics.assert_called_once_with(repo)
-        mock_app.shutdown.assert_called_once_with()
-        mock_exit.assert_called_once_with(1)
+        self.mock_sys_exit.assert_called_once_with(1)
 
-@mock.patch('sys.exit')
-@mock.patch('cli.app')
-class SubcommandMergeTests(unittest.TestCase):
 
-    def setUp(self):
-        self.repos = ['repoA', 'repoB', 'repoC']
-        self.cwd = Connector.from_string(os.path.abspath('.'))
+class MergeTests(CLIBaseTest):
 
-    def test_merge(self, mock_app, mock_exit):
-        repo = mock_app.load_repo.return_value
+    def test_merge(self):
+        others = ['repoA', 'repoB', 'repoC']
+        CLI().main(['progname', 'merge'] + others)
 
-        CLI().main(['progname', 'merge'] + self.repos)
+        self.mock_load_repo.assert_called_once_with(self.cwd)
+        repo = self.mock_load_repo.return_value
+        self.mock_merge_repos.assert_called_once_with(repo, *others)
+        self.mock_sys_exit.assert_called_once_with(0)
 
-        mock_app.load_repo.assert_called_once_with(self.cwd)
-        mock_app.merge_repos.assert_called_once_with(repo, self.repos)
-        mock_app.shutdown.assert_called_once_with()
-        mock_exit.assert_called_once_with(0)
 
-@mock.patch('sys.exit')
-@mock.patch('cli.app')
-@mock.patch('cli.Connector', spec_set=Connector)
-class SubcommandCloneTests(unittest.TestCase):
+class CloneTests(CLIBaseTest):
 
-    def setUp(self):
-        self.cwd = Connector.from_string(os.path.abspath('.'))
-
-    def test_clone(self, MockConnector, mock_app, mock_exit):
+    def test_clone(self):
         src_url = "/origin/url"
-
         CLI().main(['progname', 'clone', src_url])
 
-        src = MockConnector.from_string(src_url)
-        dest = MockConnector.from_string('.')
-        mock_app.clone_repo.assert_called_once_with(src, dest)
-        mock_app.shutdown.assert_called_once_with()
-        mock_exit.assert_called_once_with(0)
+        self.mock_clone_repo.assert_called_once_with(src=src_url, dest=self.cwd)
+        self.mock_sys_exit.assert_called_once_with(0)
 
-@mock.patch('sys.exit')
-@mock.patch('cli.app')
-@mock.patch('cli.Connector', spec_set=Connector)
-class BackupTests(unittest.TestCase):
 
-    def test_backup(self, MockConnector, mock_app, mock_exit):
-        cwd = MockConnector.from_string('.')
-        repo = mock_app.load_repo.return_value
-        backup_url = "/backup/url"
-        backup_connector = MockConnector.from_string(backup_url)
+class BackupTests(CLIBaseTest):
 
+    def test_backup(self):
+        backup_url = '/backup/url'
         CLI().main(['progname', 'backup', backup_url])
 
-        mock_app.load_repo.assert_called_once_with(cwd)
-        mock_app.backup_repo.assert_called_once_with(repo, backup_connector)
-        mock_app.shutdown.assert_called_once_with()
-        mock_exit.assert_called_once_with(0)
+        self.mock_load_repo.assert_called_once_with(self.cwd)
+        repo = self.mock_load_repo.return_value
+        self.mock_backup_repo.assert_called_once_with(repo, backup_url)
+        self.mock_sys_exit.assert_called_once_with(0)
 
-    def test_backup_to_many_urls(self, MockConnector, mock_app, mock_exit):
-        cwd = MockConnector.from_string('.')
-        repo = mock_app.load_repo.return_value
-        backup_urls = ["url1", "url2", "url3"]
-        backup_connectors = [ MockConnector.from_string(url)
-                             for url in backup_urls ]
-
+    def test_backup_to_many(self):
+        backup_urls = ['/backup1/url', '/backup2/url', '/backup3/url']
         CLI().main(['progname', 'backup'] + backup_urls)
 
-        mock_app.load_repo.assert_called_once_with(cwd)
-        mock_app.backup_repo.assert_called_once_with(repo, *backup_connectors)
-        mock_app.shutdown.assert_called_once_with()
-        mock_exit.assert_called_once_with(0)
+        self.mock_load_repo.assert_called_once_with(self.cwd)
+        repo = self.mock_load_repo.return_value
+        self.mock_backup_repo.assert_called_once_with(repo, *backup_urls)
+        self.mock_sys_exit.assert_called_once_with(0)
 
     @unittest.skip("not implemented yet")
     def test_backup_to_default(self, MockConnector, mock_app, mock_exit):
         """ 'backup' without argument should use default urls in config. """
-        cwd = MockConnector.from_string('.')
-        repo = mock_app.load_repo.return_value
-        default_backup_urls = ["url1", "url2", "url3"]
-        default_backup_connectors = [ MockConnector.from_string(url)
-                                     for url in default_backup_urls ]
-
-        CLI().main(['progname', 'backup'])
-
-        mock_app.load_repo.assert_called_once_with(cwd)
-        mock_app.backup_repo.assert_called_once_with(repo,
-                                                     *default_backup_connectors)
-        mock_app.shutdown.assert_called_once_with()
-        mock_exit.assert_called_once_with(0)
+        pass
 
 
 if __name__ == "__main__":

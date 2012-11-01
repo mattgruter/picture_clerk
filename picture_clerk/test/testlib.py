@@ -12,7 +12,11 @@ import StringIO
 import sys
 import contextlib
 import urlparse
+import uuid
 
+import repo
+
+from index import PictureIndex
 from connector import Connector
 from picture import Picture
 
@@ -89,8 +93,9 @@ class MockPicture(Picture):
         self.checksum = hashlib.sha1(filename).hexdigest()
 
     @classmethod
-    def create_many(cls, count, template='DSC_%04i.NEF'):
-        pics = [MockPicture(template % i) for i in range(count)]
+    def create_many(cls, count):
+        pics = [MockPicture('file_%s.NEF' % str(uuid.uuid4()).replace('-', ''))
+                            for i in range(count)]
         random.shuffle(pics)    # randomize list order
         return pics
 
@@ -105,3 +110,28 @@ def suppress_stderr():
     sys.stderr = DevNull()
     yield
     sys.stderr = stderr_orig
+
+
+def new_mock_repo(path, num_pics=0):
+    """
+    Return a repository containing MockPictures using MockConnector backend.
+    
+    Arguments:
+    num_pics -- Add that many MockPictures to the repository index (default: 0).
+    
+    Returns:
+    Repository instance.
+    """
+
+    connector = MockConnector.from_string(path)
+    with connector.connected():
+        # test index
+        pi = PictureIndex()
+        pi.add(MockPicture.create_many(num_pics))
+
+        # test config
+        conf = repo.new_repo_config()
+        conf['index.file'] = ".pic/testindex"
+        conf['test.test'] = "foo"
+
+        return repo.Repo.create_on_disk(connector, conf, pi)

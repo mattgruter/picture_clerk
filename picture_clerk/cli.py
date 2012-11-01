@@ -13,8 +13,6 @@ import os
 
 import app
 
-from connector import Connector
-
 
 log = logging.getLogger('pic.cli')
 
@@ -115,29 +113,16 @@ class CLI(object):
 
     def handle_merge_cmd(self, args, cwd):
         repo = app.load_repo(cwd)
-        app.merge_repos(repo, args.repos)
+        app.merge_repos(repo, *args.repos)
         return 0
 
     def handle_clone_cmd(self, args, cwd):
-        src = Connector.from_string(args.repo)
-        try:
-            src.connect()
-            app.clone_repo(src, cwd)
-        finally:
-            src.disconnect()
+        app.clone_repo(src=args.repo, dest=cwd)
         return 0
 
     def handle_backup_cmd(self, args, cwd):
         repo = app.load_repo(cwd)
-        connectors = [Connector.from_string(location)
-                      for location in args.locations]
-        try:
-            for connector in connectors:
-                connector.connect()
-            app.backup_repo(repo, *connectors)
-        finally:
-            for connector in connectors:
-                connector.disconnect()
+        app.backup_repo(repo, *args.locations)
         return 0
 
     def parse_args(self, args):
@@ -268,12 +253,8 @@ class CLI(object):
         args = self.parse_args(argv[1:])
         self.setup_signal_handlers()
         self.setup_logging(args.verbosity)
-        connector = Connector.from_string(os.path.abspath('.'))
-        try:
-            connector.connect()
-            exit_code = self.dispatch_args(args, cwd=connector)
-        finally:
-            connector.disconnect()
+        cwd = os.path.abspath('.')
+        exit_code = self.dispatch_args(args, cwd)
         self.shutdown(exit_code)
 
     def shutdown(self, exit_code):

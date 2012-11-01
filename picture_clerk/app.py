@@ -6,7 +6,6 @@
 """
 import os
 import logging
-import urlparse
 
 import repo
 
@@ -20,33 +19,37 @@ from viewer import Viewer
 log = logging.getLogger('pic.app')
 
 
-def init_repo(connector):
+def init_repo(url):
     """
     Initialize a new repository and return it.
     
     Arguments:
-    connector -- Connector pointing to location of repo to be initialized.
+    url -- URL of the repository to be initialized (e.g. '/home/user/repo').
     
     Returns:
     The initialized repository.
     """
-    repo_config = repo.new_repo_config()
-    rep = repo.Repo.create_on_disk(connector, repo_config)
+    config = repo.new_repo_config()
+    connector = Connector.from_string(url)
+    with connector.connected():
+        rep = repo.Repo.create_on_disk(connector, config)
     init_repo_logging(rep)
     log.info("Initialized empty PictureClerk repository")
     return rep
 
-def load_repo(connector):
+def load_repo(url):
     """
     Load an existing repository from disk and return it.
     
     Arguments:
-    connector -- Connector pointing to location of repo on disk.
+    url -- URL of the repository on disk.
     
     Returns:
     The loaded repository.
     """
-    rep = repo.Repo.load_from_disk(connector)
+    connector = Connector.from_string(url)
+    with connector.connected():
+        rep = repo.Repo.load_from_disk(connector)
     init_repo_logging(rep)
     log.info("Loaded PictureClerk repository from disk")
     return rep
@@ -69,23 +72,22 @@ def add_pics(rep, paths, process, recipe=None):
     pics = [Picture(path) for path in paths if os.path.exists(path)]
     rep.index.add(pics)
 
-    # process pictures
     if process:
         log.info("Processing pictures.")
-        # set up pipeline
-        if not recipe:
+        if not recipe:  # set up pipeline
             process_recipe = \
                 Recipe.fromString(rep.config['recipes.default'])
         pl = Pipeline('Pipeline1', process_recipe,
                       path=rep.connector.url.path)
         for pic in pics:
             pl.put(pic)
-        # process pictures
-        pl.start()
-        pl.join()
+        pl.start()  # start processing threads
+        pl.join()   # wait until threads exit
 
     log.info("Saving index to file.")
-    rep.save_index_to_disk()
+    with rep.connector.connected():
+        rep.save_index_to_disk()
+    return rep
 
 def remove_pics(rep, files):
     """
@@ -102,17 +104,19 @@ def remove_pics(rep, files):
     picfiles = (picfile for pic in pics
                         for picfile in pic.get_filenames())
 
-    for picfile in picfiles:
-        try:
-            rep.connector.remove(picfile)
-        except OSError, e:
-            if e.errno == 2: # ignore missing file (= already removed) error
-                log.debug("No such file: %s" % e.filename)
-            else:
-                raise   # re-raise all other (e.g. permission error)
+    with rep.connector.connected():
+        for picfile in picfiles:
+            try:
+                rep.connector.remove(picfile)
+            except OSError, e:
+                if e.errno == 2: # ignore missing file (= already removed) error
+                    log.debug("No such file: %s" % e.filename)
+                else:
+                    raise   # re-raise all other (e.g. permission error)
 
-    log.info("Saving index to file.")
-    rep.save_index_to_disk()
+        log.info("Saving index to file.")
+        rep.save_index_to_disk()
+    return rep
 
 def list_pics(rep, mode):
     """
@@ -154,13 +158,18 @@ def migrate_repo(rep):
     
     Arguments:
     rep -- Repository to migrate.
+    
+    Returns:
+    Migrated repository.
     """
     # only migrate if repo is old
     if rep.config['index.format_version'] < repo.INDEX_FORMAT_VERSION:
         log.info("Migrating repository to new format.")
         rep.config['index.format_version'] = repo.INDEX_FORMAT_VERSION
-        rep.save_index_to_disk()
-        rep.save_config_to_disk()
+        with rep.connector.connected():
+            rep.save_index_to_disk()
+            rep.save_config_to_disk()
+    return rep
 
 def check_pics(rep):
     """
@@ -176,81 +185,87 @@ def check_pics(rep):
     corrupted = []
     missing = []
 
-    for pic in rep.index.pics():
-        try:
-            with rep.connector.open(pic.filename, 'r') as buf:
-                checksum = get_sha1(buf.read())
-        except (IOError, OSError):
-            missing.append(pic.filename)
-        else:
-            if checksum != pic.checksum:
-                corrupted.append(pic.filename)
+    with rep.connector.connected():
+        for pic in rep.index.pics():
+            try:
+                with rep.connector.open(pic.filename, 'r') as buf:
+                    checksum = get_sha1(buf.read())
+            except (IOError, OSError):
+                missing.append(pic.filename)
+            else:
+                if checksum != pic.checksum:
+                    corrupted.append(pic.filename)
 
     return corrupted, missing
 
-def merge_repos(rep, others):
+def merge_repos(rep, *others):
     """
     Merge multiple repositories into one.
     
     Arguments:
     rep    -- Merge 'others' repositories into this repository.
-    others -- Path pointing to repositories to merge into 'rep'.
+    others -- Path to repositories to merge into 'rep' (1 or more path args).
     """
-    for url in others:
-        log.info("Merging repository '%s'", url)
-        connector = Connector.from_string(url)
-        try:
-            connector.connect()
-            other = repo.Repo.load_from_disk(connector)
-
-            # copy picture files
-            for picture in other.index.iterpics():
-                for fname in picture.get_filenames():
-                    connector.copy(fname, rep.connector, dest_path=fname)
-        finally:
-            connector.disconnect()
-
-        # add pictures to index
-        rep.index.add(other.index.iterpics())
-
+    with rep.connector.connected():
+        for url in others:
+            log.info("Merging repository '%s'", url)
+            connector = Connector.from_string(url)
+            with connector.connected():
+                other = repo.Repo.load_from_disk(connector)
+                # copy picture files
+                for picture in other.index.iterpics():
+                    for fname in picture.get_filenames():
+                        connector.copy(fname, rep.connector, dest_path=fname)
+            # add pictures to index
+            rep.index.add(other.index.iterpics())
     log.info("Saving index to file.")
-    rep.save_index_to_disk()
+    with rep.connector.connected():
+        rep.save_index_to_disk()
+    return rep
 
 def clone_repo(src, dest):
     """
     Clone a repository.
     
     Arguments:
-    src  -- Connector pointing to the repository to clone from.
-    dest -- Connector pointing to the target directory of the clone.
+    src  -- URL of to the repository to clone from.
+    dest -- URL of the target directory of the clone.
     
     Returns:
     A clone of the supplied repository.
     """
-    origin = repo.Repo.load_from_disk(src)
-    # create clone at "<dest>/<reponame>" not at "<dest>" directly
-    dest_path = os.path.join(dest.url.path, origin.name)
-    dest.update_url(urlparse.urlparse(dest_path))
-    clone = repo.Repo.clone(origin, dest)
+    src_connector = Connector.from_string(src)
+    with src_connector.connected():
+        origin = repo.Repo.load_from_disk(src_connector)
+        dest = os.path.join(dest, origin.name)  # make clone at "<dest>/<name>"
+        dest_connector = Connector.from_string(dest)
+        with dest_connector.connected():
+            clone = repo.Repo.clone(origin, dest_connector)
     init_repo_logging(clone)
-    log.info("Cloned repository from %s to %s" % (src.url.path,
-                                                  dest.url.path))
+    log.info("Cloned repository from %s to %s" % (src, dest))
     return clone
 
-def backup_repo(rep, *locations):
+def backup_repo(rep, *urls):
     """
     Backup a repository to multiple locations.
     
     Arguments:
-    rep       -- Repository to be backed up
-    locations -- Backup repo to these locations (1 or more location args).
+    rep  -- Repository to be backed up
+    urls -- Backup repository to these locations (1 or more URL args).
+    
+    Returns:
+    Backup repositories (clones of the supplied respositories).
     """
-    for location in locations:
-        backup_path = os.path.join(location.url.path, rep.name)
-        location.update_url(urlparse.urlparse(backup_path))
-        backup = repo.Repo.clone(rep, location)
+    backups = list()
+    for url in urls:
+        url = os.path.join(url, rep.name)
+        connector = Connector.from_string(url)
+        with rep.connector.connected(), connector.connected():
+            backup = repo.Repo.clone(rep, connector)
         init_repo_logging(backup)
-        log.info("Backed up repository to %s" % location.url.path)
+        backups.append(backup)
+        log.info("Backed up repository to %s" % url)
+    return backups
 
 def init_repo_logging(rep):
     """Setup file-based logging for a local repository."""
