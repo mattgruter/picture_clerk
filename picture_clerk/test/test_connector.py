@@ -133,6 +133,7 @@ class ConnectorMkdirTest(unittest.TestCase):
         self.assertRaises(NotConnectedError, self.tc.mkdir, 'path', 755)
         self.assertFalse(self.tc._mkdir.called)
 
+
 class ConnectorRemoveTest(unittest.TestCase):
 
     def setUp(self):
@@ -143,6 +144,7 @@ class ConnectorRemoveTest(unittest.TestCase):
         """remove() should raise NotConnectedError if !isconnected."""
         self.assertRaises(NotConnectedError, self.tc.remove, 'path')
         self.assertFalse(self.tc._mkdir.called)
+
 
 class ConnectorCopyTest(unittest.TestCase):
 
