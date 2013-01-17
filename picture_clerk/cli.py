@@ -10,8 +10,10 @@ import argparse
 import signal
 import sys
 import os
+import pprint
 
 import app
+import config
 
 
 log = logging.getLogger('pic.cli')
@@ -32,15 +34,15 @@ class CLI(object):
         self.shutdown(exit_code=128 + signum)
 
     def handle_sigterm(self, signum, frame):
-        print("Caught signal TERM") # don't use logging due to possible deadlock
+        print("Caught signal TERM")  # don't use logging due to possible deadlock
         self.shutdown(exit_code=128 + signum)
 
     def setup_logging(self, verbosity):
         """Configure logging and add console logger with supplied verbosity.
-        
+
         Arguments:
         verbosity -- console loglevel (0 -> warning, 1 -> info, 2 -> debug)
-        
+
         """
         root_logger = logging.getLogger()
         root_logger.setLevel(logging.DEBUG)
@@ -61,46 +63,46 @@ class CLI(object):
         console.setFormatter(formatter)
         root_logger.addHandler(console)
 
-    def dispatch_args(self, args, cwd):
+    def handle_command(self, conf):
+        log.info("Configuration:\n%s", pprint.pformat(conf))
         try:
-            exit_code = args.func(args, cwd)
+            exit_code = conf['func'](conf)
         except:
-            log.info("", exc_info=sys.exc_info())
-            log.error(sys.exc_info()[1])
+            log.error("", exc_info=sys.exc_info())
             exit_code = 1
         return exit_code
 
-    def handle_init_cmd(self, args, cwd):
-        app.init_repo(cwd)
+    def handle_init_cmd(self, conf):
+        app.init_repo(conf['working_dir'])
         return 0
 
-    def handle_add_cmd(self, args, cwd):
-        repo = app.load_repo(cwd)
-        app.add_pics(repo, args.files, args.process, args.recipe)
+    def handle_add_cmd(self, conf):
+        repo = app.load_repo(conf['working_dir'])
+        app.add_pics(repo, conf['add.files'], conf['add.process'], conf['add.recipe'])
         return 0
 
-    def handle_remove_cmd(self, args, cwd):
-        repo = app.load_repo(cwd)
-        app.remove_pics(repo, args.files)
+    def handle_remove_cmd(self, conf):
+        repo = app.load_repo(conf['working_dir'])
+        app.remove_pics(repo, conf['remove.files'])
         return 0
 
-    def handle_list_cmd(self, args, cwd):
-        repo = app.load_repo(cwd)
-        print app.list_pics(repo, args.mode)
+    def handle_list_cmd(self, conf):
+        repo = app.load_repo(conf['working_dir'])
+        print app.list_pics(repo, conf['list.mode'])
         return 0
 
-    def handle_view_cmd(self, args, cwd):
-        repo = app.load_repo(cwd)
-        app.view_pics(repo, args.viewer)
+    def handle_view_cmd(self, conf):
+        repo = app.load_repo(conf['working_dir'])
+        app.view_pics(repo, conf['viewer.prog'])
         return 0
 
-    def handle_migrate_cmd(self, args, cwd):
-        repo = app.load_repo(cwd)
+    def handle_migrate_cmd(self, conf):
+        repo = app.load_repo(conf['working_dir'])
         app.migrate_repo(repo)
         return 0
 
-    def handle_check_cmd(self, args, cwd):
-        repo = app.load_repo(cwd)
+    def handle_check_cmd(self, conf):
+        repo = app.load_repo(conf['working_dir'])
         corrupt_pics, missing_pics = app.check_pics(repo)
         exit_code = 0
         if corrupt_pics:
@@ -111,35 +113,35 @@ class CLI(object):
             exit_code = 1
         return exit_code
 
-    def handle_merge_cmd(self, args, cwd):
-        repo = app.load_repo(cwd)
-        app.merge_repos(repo, *args.repos)
+    def handle_merge_cmd(self, conf):
+        repo = app.load_repo(conf['working_dir'])
+        app.merge_repos(repo, *conf['merge.repos'])
         return 0
 
-    def handle_clone_cmd(self, args, cwd):
-        app.clone_repo(src=args.repo, dest=cwd)
+    def handle_clone_cmd(self, conf):
+        app.clone_repo(src=conf['clone.repo'], dest=conf['working_dir'])
         return 0
 
-    def handle_backup_cmd(self, args, cwd):
-        repo = app.load_repo(cwd)
-        app.backup_repo(repo, *args.locations)
+    def handle_backup_cmd(self, conf):
+        repo = app.load_repo(conf['working_dir'])
+        app.backup_repo(repo, *conf['backup.path'])
         return 0
 
-    def parse_args(self, args):
-        """Parse command line arguments and return result.
-        
+    def parse_args(self, args, conf):
+        """Parse command line arguments and and return dict with args.
+
         Arguments:
         args -- list of command line arguments (e.g. sys.argv[1:])
-        
+
         """
         descr = "PictureClerk - The little helper for your picture workflow."
-        parser = argparse.ArgumentParser(description=descr)
+        parser = argparse.ArgumentParser(description=descr, prog='pic')
         subparsers = parser.add_subparsers(title='commands', dest='cmd')
 
         # global arguments
         parser.add_argument(
             '-v', '--verbose',
-            dest='verbosity',
+            dest='logging.verbosity',
             action='count',
             help="more verbose output (can be supplied multiple times)")
 
@@ -155,16 +157,17 @@ class CLI(object):
             help="add picture files to repository")
         parser_add.add_argument(
             '-n', '--noprocess',
-            dest='process',
+            dest='add.process',
             default=True,
             action='store_false',
             help="only add files to repository without processing")
         parser_add.add_argument(
             '--recipe',
-            dest='recipe',
+            dest='add.recipe',
+            metavar='RECIPE',
             help="processing instructions (comma separated list)")
         parser_add.add_argument(
-            'files',
+            'add.files',
             metavar='file',
             nargs='+',
             help="picture file(s) to add")
@@ -175,7 +178,7 @@ class CLI(object):
             'remove',
             help="remove pictures and associated files")
         parser_remove.add_argument(
-            'files',
+            'remove.files',
             metavar='file',
             nargs='+',
             help="picture(s) to remove")
@@ -186,7 +189,7 @@ class CLI(object):
             'list',
             help="print information about repository")
         parser_list.add_argument(
-            'mode',
+            'list.mode',
             nargs='?',
             default='all',
             choices=['all', 'thumbnails', 'sidecars', 'checksums'],
@@ -199,6 +202,7 @@ class CLI(object):
             help="view pictures")
         parser_view.add_argument(
              '--viewer',
+             dest='viewer.prog',
              metavar='CMD',
              help="program to use as picture viewer")
         parser_view.set_defaults(func=self.handle_view_cmd)
@@ -220,7 +224,7 @@ class CLI(object):
             'merge',
             help="join two or more repositories together")
         parser_merge.add_argument(
-            'repos',
+            'merge.repos',
             metavar='repo',
             nargs='+',
             help="repositories to merge into current one")
@@ -231,30 +235,54 @@ class CLI(object):
             'clone',
             help="clone repository")
         parser_clone.add_argument(
-            'repo',
+            'clone.repo',
             metavar='repo',
             help="repository to clone (origin)")
         parser_clone.set_defaults(func=self.handle_clone_cmd)
 
         # 'backup' subcommand
+        try:
+            backup_paths = [os.path.expanduser(path)
+                            for path in conf['backup.path'].split(':')]
+        except KeyError:
+            backup_paths = None
         parser_backup = subparsers.add_parser(
             'backup',
             help="backup repository")
         parser_backup.add_argument(
-            'locations',
+            'backup.path',
+            default=backup_paths,
+            metavar='path',
             nargs='*',
-            metavar='locations',
-            help="one or more backup location(s)")
+            help="one or more backup path(s)")
         parser_backup.set_defaults(func=self.handle_backup_cmd)
 
-        return parser.parse_args(args)
+        return vars(parser.parse_args(args))
+
+    def load_config(self):
+        conf = config.new_app_config()
+        try:
+            with open(config.APP_CONFIG_FILE, 'r') as config_fh:
+                conf.read(config_fh)
+        except IOError:
+            pass
+        return conf
+
+    def merge_args_into_config(self, conf, args):
+        merged = conf.todict()
+        merged.update(args)
+        return merged
 
     def main(self, argv):
-        args = self.parse_args(argv[1:])
+        conf = self.load_config()
+        args = self.parse_args(argv[1:], conf)
+        conf = self.merge_args_into_config(conf, args)
+        conf['working_dir'] = os.path.abspath('.')
+
         self.setup_signal_handlers()
-        self.setup_logging(args.verbosity)
-        cwd = os.path.abspath('.')
-        exit_code = self.dispatch_args(args, cwd)
+        self.setup_logging(conf['logging.verbosity'])
+
+        exit_code = self.handle_command(conf)
         self.shutdown(exit_code)
 
     def shutdown(self, exit_code):

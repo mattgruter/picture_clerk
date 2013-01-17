@@ -18,6 +18,9 @@ APP_DIR = os.path.join(os.path.expanduser('~'), '.' + APP_SHORT_NAME)
 # application global logging
 APP_LOG_FILE = os.path.join(APP_DIR, 'log')
 
+# application global config file
+APP_CONFIG_FILE = os.path.join(APP_DIR, 'config')
+
 # number of workers in each stage by default
 STAGE_SIZE = 1
 
@@ -29,6 +32,9 @@ EXIV2_BIN = '/usr/bin/exiv2'
 
 # path to jhead executable (used by AutorotWorker)
 JHEAD_BIN = '/usr/bin/jhead'
+
+# default viewer program
+VIEWER = 'qiv -m -t'
 
 
 class Config(collections.MutableMapping):
@@ -44,7 +50,6 @@ class Config(collections.MutableMapping):
         if d:
             for key, value in d.iteritems():
                 self[key] = value
-
 
     def __getitem__(self, key):
         try:
@@ -65,7 +70,7 @@ class Config(collections.MutableMapping):
             raise KeyError(key)
         try:
             self._parser.set(section, option, str(value))
-        except ConfigParser.NoSectionError: # create section if it doesn't exist
+        except ConfigParser.NoSectionError:  # create section if it doesn't exist
             self._parser.add_section(section)
             self[key] = value
 
@@ -92,15 +97,19 @@ class Config(collections.MutableMapping):
     def __repr__(self):
         return '%s(%s)' % (self.__class__.__name__, str(self))
 
+    def todict(self):
+        """Return the configuration as a dictionary."""
+        return dict(self.iteritems())
+
     def parse_string_value(self, value):
         """Parse the supplied string and cast it to int or float if applicable.
-        
+
         The value is first cast to int, if that fails it is cast to float and
         if that also fails the value is returned unchanged.
-        
+
         Arguments:
         value -- string representation of either an int, float or string.
-        
+
         """
         try:
             return int(value)
@@ -114,19 +123,19 @@ class Config(collections.MutableMapping):
 
     def write(self, fh):
         """Write configuration file (same file format as ConfigParser).
-        
+
         Arguments:
         fh -- writable file-like object
-        
+
         """
         self._parser.write(fh)
 
     def read(self, fh):
         """Read configuration from a ConfigParser file.
-        
+
         Arguments:
         fh -- readable file-like object
-        
+
         """
         self._parser.readfp(fh)
 
@@ -156,6 +165,7 @@ def new_app_config():
         'pipeline.workertimeout': WORKER_TIMEOUT,
         'tools.exiv2': EXIV2_BIN,
         'tools.jhead': JHEAD_BIN,
+        'viewer.prog': VIEWER,
                 }
 
     return Config(APP_CONFIG)
