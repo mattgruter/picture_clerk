@@ -1,0 +1,11 @@
+# Runtime dependencies
+## SSH
+paramiko>=1.7.7.1
+## Exiv2
+pyexiv2>=0.3.2
+
+# Test runtime dependencies
+## mocking
+mock>=0.7.2
+## nosetest framework
+nose>=1.1.2
