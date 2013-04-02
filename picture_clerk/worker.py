@@ -10,14 +10,32 @@ import Queue
 import subprocess
 import time
 import hashlib
-import pyexiv2
 import logging
 
 import config
 import repo
 
+import gi
+from gi.repository import GExiv2
+
 
 log = logging.getLogger('pic.worker')
+
+
+def read_exif_metdata(filename):
+    try:
+        metadata = GExiv2.Metadata(filename)
+    except gi._glib.GError as gerr:
+        ioe = IOError()
+        # FIXME: errno=2 is only for "file not found" error. other errors
+        #        (e.g. "permissions denied") have a different ioe
+        #        --> how should GErrors be translated into native Python errors?
+        ioe.errno = 2
+        ioe.filename = filename
+        ioe.strerror = gerr.message
+        raise ioe
+    else:
+        return metadata
 
 
 #class WorkerState():
@@ -121,46 +139,61 @@ class ThumbWorker(Worker):
     def _work(self, picture, jobnr):
 
         # create thumbnail subdir if it doesn't already exist
-        #@fixme: this isn't thread-safe!
+        # FIXME: this isn't thread-safe!
         if not os.path.exists(repo.THUMB_SIDECAR_DIR):
             os.mkdir(repo.THUMB_SIDECAR_DIR)
 
-        metadata = pyexiv2.ImageMetadata(picture.filename)
-        metadata.read()
-        # pyexiv2 sorts previews by dimensions (ascending), we are only
-        # interested in the one with the largest dimensions
-        thumb = metadata.previews[-1]
-        thumb_filename = picture.basename + '.thumb' + thumb.extension
-        thumb_path = os.path.join(repo.THUMB_SIDECAR_DIR, thumb_filename)
+        try:
+            metadata = read_exif_metdata(picture.filename)
+        except IOError as ioe:
+            self.logger.error("%s (%i): error reading file %s: %s",
+                              self.name, jobnr, picture.filename, ioe)
+            return False
 
-        # @todo: save MIME type
-#        thumb_mime_type = thumb.mime_type
+        # exiv2 sorts previews by dimensions (ascending), we are only
+        # interested in the one with the largest dimensions
+        props = metadata.get_preview_properties()[-1]
+        thumb = metadata.get_preview_image(props)
+        thumb_filename = picture.basename + '.thumb' + thumb.get_extension()
+        thumb_path = os.path.join(repo.THUMB_SIDECAR_DIR, thumb_filename)
+        # save thumbnail to file
+        # FIXME: gexiv2 doesn't support copyting metadata. Therefore we need to
+        #        first create the thumbnail and save it to file. We then have
+        #        to load its metadata with gexiv2 from file, replace its meta-
+        #        data with metadata from the original image and then save it
+        #        back to the filesystem. So instead of just 1 write, we need
+        #        2 write & 1 read.
+        try:
+            with open(thumb_path, 'wb') as fh:
+                fh.write(thumb.get_data())
+        except (IOError, OSError) as err:
+            self.logger.error("%s (%i): error writing to file %s: %s",
+                              self.name, jobnr, thumb_path, err)
+            return False
+
+        # TODO: save MIME type
+#        thumb_mime_type = thumb.get_mime_type()
 
         # copy metadata from RAW file to thumbnail
-        thumb_metadata = pyexiv2.ImageMetadata.from_buffer(thumb.data)
-        thumb_metadata.read()
-        metadata.copy(thumb_metadata)
+        try:
+            thumb_metadata = read_exif_metdata(thumb_path)
+        except IOError as ioe:
+            self.logger.error("%s (%i): error reading file %s: %s",
+                              self.name, jobnr, thumb_path, ioe)
+            return False
+        # TODO: Ugly way to copy tags.
+        #       Patch GExiv2 to support full dict protocol 
+        for key in metadata:
+            thumb_metadata[key] = metadata[key]
 
         # modify EXIF tags for the thumbnail
         # tag: Image Compression (JPEG => 7)
-        # @todo: Image Compression should be set according to MIME type
-        #        (see http://exiv2.org/tags.html)
-        # @todo: should more tags be modified?
-        thumb_metadata['Exif.Image.Compression'] = 7
-
-        thumb_metadata.write()
-        thumb_buf = thumb_metadata.buffer
-        # save thumbnail to file
-        try:
-            thumb_fh = open(thumb_path, 'wb')
-        except (IOError, OSError) as err:
-            self.logger.error("%s (%i): error opening file %s: %s",
-                              self.name, jobnr, thumb_path, err)
-            return False
-        else:
-            with thumb_fh:
-                thumb_fh.write(thumb_buf)
-            return True
+        # TODO: Image Compression should be set according to MIME type
+        #       (see http://exiv2.org/tags.html)
+        # TODO: should more tags be modified?
+        thumb_metadata['Exif.Image.Compression'] = "7"
+        thumb_metadata.save_file()
+        return True
 
     def _compile_sidecar_path(self, picture):
         # FIXME: thumb might have different extension than "jpg", see above's
@@ -183,17 +216,9 @@ class MetadataWorker(Worker):
 
     name = 'MetadataWorker'
 
-    def _parse_exif(self, exif_tag):
-        if isinstance(exif_tag, pyexiv2.Rational):
-            # TODO: convert rational numbers to more sane values (rat, int?)
-            return exif_tag.human_value
-        else:
-            return exif_tag.human_value
-
     def _work(self, picture, jobnr):
-        # TODO: catch exceptions of inaccessible files
-        _picFname = os.path.join(self.path, picture.filename)
-        _keys = ['Exif.Photo.ExposureTime', 'Exif.Photo.FNumber',
+        path = os.path.join(self.path, picture.filename)
+        exif_keys = ['Exif.Photo.ExposureTime', 'Exif.Photo.FNumber',
                  'Exif.Photo.ExposureProgram', 'Exif.Photo.ISOSpeedRatings',
                  'Exif.Photo.DateTimeOriginal', 'Exif.Photo.DateTimeDigitized',
                  'Exif.Photo.ExposureBiasValue',
@@ -202,21 +227,16 @@ class MetadataWorker(Worker):
                  'Exif.Photo.FocalLength', 'Exif.Photo.FocalLengthIn35mmFilm',
                  'Exif.Image.Make', 'Exif.Image.Model',
                  'Exif.Photo.UserComment']
-        try:
-            metadata = pyexiv2.ImageMetadata(_picFname)
-            metadata.read()
-        except IOError:
-            self.logger.error("%s (%i): file not found: %s", _picFname)
-            return False
-        # TODO: better way to copy part of a dictionary?
-        for k in _keys:
-            try:
-                picture.metadata[k] = self._parse_exif(metadata[k])
-            except IndexError:
-                picture.metadata[k] = None
-            except IOError:
-                picture.metadata[k] = None
 
+        try:
+            metadata = read_exif_metdata(path)
+        except IOError as ioe:
+            self.logger.error("%s (%i): error opening file %s: %s",
+                  self.name, jobnr, path, ioe)
+            return False
+
+        tags = (metadata.get_tag_interpreted_string(key) for key in exif_keys)
+        picture.metadata = {key: val for (key, val) in zip(exif_keys, tags)}
         return True
 
 
@@ -236,7 +256,7 @@ class HashDigestWorker(Worker):
         picture.checksum = digest
         if repo.SHA1_SIDECAR_ENABLED:
             # create sha1 subdir if it doesn't already exist
-            #@fixme: this isn't thread-safe!
+            # FIXME: this isn't thread-safe!
             if not os.path.exists(repo.SHA1_SIDECAR_DIR):
                 os.mkdir(repo.SHA1_SIDECAR_DIR)
 
