@@ -16,11 +16,13 @@ This will print some helpful information about how to invoke the program.
 Dependencies
 ------------
 
-You need Python 2.7 to run PictureClerk. Python 3 is not supported yet, mainly due to the fact that pyexiv2 does not yet support it.
+* [Python 2.7](http://www.python.org/download/releases/2.7/)
+* [Paramiko](http://www.lag.net/paramiko/)
+* [GExiv2](http://redmine.yorba.org/projects/gexiv2/wiki)
+* [jhead](http://www.sentex.net/~mwandel/jhead/)
+* [qiv](http://spiegl.de/qiv/)
 
-Furthermore the tools "qiv" and "jhead" are required by PictureClerk.
-
-A list over necessary Python modules can be found in the file requirements.txt
+A list over necessary Python modules can be found in the [requirements file](/requirements.txt)
 
 
 Development
