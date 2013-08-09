@@ -1,0 +1,6 @@
+git support
+
+tools
+- git-annex
+- dulwich (https://github.com/jelmer/dulwich)
+- gittle (https://github.com/FriendCode/gittle)
