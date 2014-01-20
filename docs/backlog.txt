@@ -39,6 +39,10 @@ Features
 * Logging
   Don't log everything to repo log. Log only stuff relevant to repo: pics added/removed/edited, etc
 
+* CLI
+  Better user feedback on CLI: progress reporting (see
+  https://github.com/noamraph/tqdm), useful error messages, etc.
+
 
 Tech
 ====
