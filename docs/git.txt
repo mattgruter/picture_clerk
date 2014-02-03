@@ -2,5 +2,6 @@ git support
 
 tools
 - git-annex
+- gitlib2 with Python bindings (https://github.com/libgit2/pygit2)
 - dulwich (https://github.com/jelmer/dulwich)
 - gittle (https://github.com/FriendCode/gittle)
