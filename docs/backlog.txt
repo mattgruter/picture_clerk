@@ -50,6 +50,8 @@ Tech
 * Support Python 3
   pyexiv2 & paramiko are not yet supported. Either wait until those modules are
   ported or switch to alternative solutions.
+  - pyexiv2 is incompatible with python3 and deprecated.
+    It should be replaced with GExiv2 (GObject wrapper for libexiv2).
 
 * Remove dependency on jhead
   Autorotate feature should be implemented in Python.

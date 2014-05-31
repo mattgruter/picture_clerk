@@ -1,8 +1,8 @@
 # Runtime dependencies
 ## SSH
 paramiko>=1.7.7.1
-## Exiv2
-pyexiv2>=0.3.2
+## Exiv2 (not available on PyPI)
+#pyexiv2>=0.3.2
 
 # Test runtime dependencies
 ## mocking
