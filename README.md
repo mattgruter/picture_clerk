@@ -16,7 +16,7 @@ This will print some helpful information about how to invoke the program.
 Dependencies
 ------------
 
-* [Python 2.7](http://www.python.org/download/releases/2.7/)
+* [Python 3.3](http://www.python.org/download/releases/3.3/)
 * [Paramiko](http://www.lag.net/paramiko/)
 * [GExiv2](http://redmine.yorba.org/projects/gexiv2/wiki)
 * [jhead](http://www.sentex.net/~mwandel/jhead/)
@@ -38,6 +38,5 @@ On Ubuntu install the following packages
 Then run the following commands to create the development environment:
 
 ```bash
-mkvirtualenv -a [PROJECTPATH] -r requirements.txt --python /usr/bin/python2.7 --no-site-packages pic
-ln -s /usr/lib/python2.7/dist-packages/{libexiv2python.so,pyexiv2} "$WORKON_HOME"/pic/lib/python2.7/site-packages
+mkvirtualenv -a . -r requirements.txt --python /usr/bin/python3.3 --site-packages pic
 ```
