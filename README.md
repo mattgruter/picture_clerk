@@ -36,6 +36,5 @@ On Ubuntu install the following packages
 Then run the following commands to create the development environment:
 
 ```bash
-mkvirtualenv -a [PROJECTPATH] -r requirements.txt --python /usr/bin/python2.7 --no-site-packages pic
-ln -s /usr/lib/python2.7/dist-packages/{libexiv2python.so,pyexiv2} "$WORKON_HOME"/pic/lib/python2.7/site-packages
+mkvirtualenv -a [PROJECTPATH] -r requirements.txt --python /usr/bin/python2.7 --site-packages pic
 ```
