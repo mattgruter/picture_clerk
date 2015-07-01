@@ -213,8 +213,13 @@ class MetadataWorker(Worker):
             try:
                 picture.metadata[k] = self._parse_exif(metadata[k])
             except IndexError:
+                self.logger.error("Error reading metadata from file %s", picture.filename)
                 picture.metadata[k] = None
             except IOError:
+                self.logger.error("Error reading metadata from file %s", picture.filename)
+                picture.metadata[k] = None
+            except KeyError:
+                self.logger.error("Error reading metadata from file %s", picture.filename)
                 picture.metadata[k] = None
 
         return True
@@ -281,7 +286,6 @@ class SubprocessWorker(Worker):
 
     def _work(self, picture, jobnr):
         commands = self._compile_commands(picture)
-
         for command in commands:
             try:
                 self.process = subprocess.Popen(command,
@@ -340,5 +344,8 @@ class AutorotWorker(SubprocessWorker):
     _args = '-autorot'
 
     def _compile_commands(self, picture):
-        cmd = [ self._bin, self._args, picture.thumbnail ]
-        return cmd,
+        if not picture.thumbnail:
+            return [echo, "SKIPPED"],
+        else:
+            cmd = [ self._bin, self._args, picture.thumbnail ]
+            return cmd,
