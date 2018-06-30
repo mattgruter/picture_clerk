@@ -7,10 +7,10 @@ src="$1"
 dest="$2"
 
 function find_album_date() {
-    image=$( ls "$1"/*.{NEF,JPG} | sort -n | head -1 )
+    image=$( ls "$1"/*.NEF | sort -n | head -1 )
 
     IFS=': '
-    set $(exiv2 -g Exif.Image.DateTime -Pv $image)
+    set $(exiv2 -g Exif.Image.DateTime -Pv "$image")
     unset IFS
     date=$1$2$3
 
@@ -40,8 +40,8 @@ function import_into_pictureclerk() {
     dir="$1"
 
     cd "$1"
-    pic init
-    pic add *.{NEF,JPG}
+    ./bin/pic init
+    ./bin/pic add *.{NEF,JPG}
     cat .pic/sha1/*.sha1 > sha1sums.pic.txt
     diff sha1sums.txt sha1sums.pic.txt
 }
